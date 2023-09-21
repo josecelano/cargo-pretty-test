@@ -1,8 +1,8 @@
-# Pretty-test ✨
+# Cargo Pretty Test ✨
 
 [![Testing](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml/badge.svg)](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml)
 
-A Rust command that prettifies the ugly `cargo test` into a beautiful output.
+A Rust command that prettifies the ugly `cargo test` output into a beautiful output.
 
 Input:
 
@@ -62,6 +62,11 @@ cargo pretty-test
 ```
 
 ## Credits
+
+- First commit author [@ZJPzjp](https://github.com/zjp-CN).
+- Idea described on [https://users.rust-lang.org](https://users.rust-lang.org/t/cargo-test-output-with-indentation/100149) by [@josecelano](https://github.com/josecelano).
+
+### Links
 
 - <https://users.rust-lang.org/t/cargo-test-output-with-indentation/100149>
 - <https://www.rustexplorer.com/b/i058g3>
