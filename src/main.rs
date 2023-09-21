@@ -1,20 +1,15 @@
-use pretty_test::app::make_pretty;
-use std::io::{self, Read};
-use std::process;
+use cargo_pretty_test::app::make_pretty;
+use regex_lite::Regex;
+use std::process::Command;
 
 fn main() {
-    let mut input = String::new();
-
-    io::stdin()
-        .read_to_string(&mut input)
-        .expect("Failed to read from stdin");
-
-    if input.is_empty() {
-        println!("No input provided. Exiting...");
-        process::exit(1);
-    }
-
-    if let Some(pretty_output) = make_pretty(&input) {
-        println!("{pretty_output}");
+    let output = Command::new("cargo")
+        .arg("test")
+        .output()
+        .expect("`cargo test` failed");
+    let text = String::from_utf8_lossy(&output.stdout);
+    let re = Regex::new(r"(?m)^test \S+ \.\.\. \S+$").expect("regex pattern error");
+    if let Some(tree) = make_pretty(re.find_iter(&text).map(|m| m.as_str())) {
+        println!("{tree}");
     }
 }

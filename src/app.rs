@@ -3,9 +3,9 @@ use termtree::{GlyphPalette, Tree};
 
 /// Make the cargo test output pretty.
 #[must_use]
-pub fn make_pretty(output: &str) -> Option<Tree<&str>> {
+pub fn make_pretty<'s>(lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s str>> {
     let mut path = BTreeMap::new();
-    for line in output.trim().lines() {
+    for line in lines {
         let mut iter = line.trim().splitn(3, ' ');
         let mut split = iter.nth(1)?.split("::");
         let next = split.next();
