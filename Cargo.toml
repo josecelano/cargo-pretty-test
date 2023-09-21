@@ -1,0 +1,14 @@
+[package]
+name = "pretty-test"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0"
+authors = ["vague", "Jose Celano <josecelano@gmail.com>"]
+description = "A console command to format cargo test output"
+repository = "https://github.com/josecelano/pretty-test"
+
+[dependencies]
+termtree = "0.4.1"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"

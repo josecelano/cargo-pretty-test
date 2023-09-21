@@ -1,0 +1,11 @@
+{
+    "words": [
+        "splitn",
+        "termtree"
+    ],
+    "enableFiletypes": [
+        "dockerfile",
+        "shellscript",
+        "toml"
+    ]
+}
