@@ -1,5 +1,7 @@
 # Pretty-test ✨
 
+[![Testing](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml/badge.svg)](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml)
+
 A Rust command that prettifies the ugly `cargo test` into a beautiful output.
 
 Input:
