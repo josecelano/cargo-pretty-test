@@ -1,12 +1,11 @@
-#[cfg(test)]
+use cargo_pretty_test::app::make_pretty;
 use pretty_assertions::assert_eq;
-use pretty_test::app::make_pretty;
 
 #[test]
 fn golden_master_test() {
     // Snapshot test for output after one generation
 
-    const INPUT: &str ="
+    const INPUT: &str = "
     test e2e::web::api::v1::contexts::category::contract::it_should_not_allow_adding_duplicated_categories ... ok
     test e2e::web::api::v1::contexts::tag::contract::it_should_not_allow_adding_duplicated_tags ... ok
     test e2e::web::api::v1::contexts::category::contract::it_should_not_allow_non_admins_to_delete_categories ... ok
@@ -19,7 +18,7 @@ fn golden_master_test() {
     test e2e::web::api::v1::contexts::tag::contract::it_should_not_allow_non_admins_to_delete_tags ... ok
     ";
 
-    const OUTPUT: &str = "
+    const OUTPUT: &str = "\
 test
 └── e2e
     └── web
@@ -46,7 +45,9 @@ test
 ";
 
     assert_eq!(
-        format!("\n{}", make_pretty(INPUT).unwrap().to_string()),
+        make_pretty(INPUT.trim().lines().map(str::trim))
+            .unwrap()
+            .to_string(),
         OUTPUT
     );
 }

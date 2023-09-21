@@ -3,18 +3,19 @@
 version = 3
 
 [[package]]
+name = "cargo-pretty-test"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "regex-lite",
+ "termtree",
+]
+
+[[package]]
 name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
-name = "pretty-test"
-version = "0.1.0"
-dependencies = [
- "pretty_assertions",
- "termtree",
-]
 
 [[package]]
 name = "pretty_assertions"
@@ -25,6 +26,12 @@ dependencies = [
  "diff",
  "yansi",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f96ede7f386ba6e910092e7ccdc04176cface62abebea07ed6b46d870ed95ca2"
 
 [[package]]
 name = "termtree"
