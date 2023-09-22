@@ -6,6 +6,7 @@ license = "MIT OR GPL-3.0"
 authors = ["vague <jiping_zhou@foxmail.com>", "Jose Celano <josecelano@gmail.com>"]
 description = "A console command to format cargo test output"
 repository = "https://github.com/josecelano/pretty-test"
+exclude = [".*", "tests/", "cSpell.json", "rustfmt.toml"]
 
 [dependencies]
 termtree = "0.4"
@@ -13,3 +14,10 @@ regex-lite = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
+insta = "1.32"
+
+[build-dependencies]
+rustc_version = "0.4"
+
+[workspace]
+members = ["./tests/integration/"]
