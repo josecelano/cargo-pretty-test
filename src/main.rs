@@ -1,4 +1,4 @@
-use cargo_pretty_test::{app::make_pretty, regex::get_lines_of_tests};
+use cargo_pretty_test::{app::make_pretty, regex::parse_cargo_test};
 use std::process::Command;
 
 fn main() {
@@ -7,7 +7,8 @@ fn main() {
         .output()
         .expect("`cargo test` failed");
     let text = String::from_utf8_lossy(&output.stdout);
-    if let Some(tree) = make_pretty(get_lines_of_tests(&text)) {
-        println!("{tree}");
+    let (head, tree, detail) = parse_cargo_test(&text);
+    if let Some(tree) = make_pretty(tree.into_iter()) {
+        println!("{head}\n{tree}\n{detail}");
     }
 }
