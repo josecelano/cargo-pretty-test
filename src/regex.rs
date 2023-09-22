@@ -34,7 +34,13 @@ lazy_static! {
     };
 }
 
-pub fn parse_cargo_test(text: &str) -> (&str, Vec<&str>, &str) {
+pub struct ParsedCargoTestOutput<'s> {
+    pub head: &'s str,
+    pub tree: Vec<&'s str>,
+    pub detail: &'s str,
+}
+
+pub fn parse_cargo_test_output(text: &str) -> ParsedCargoTestOutput<'_> {
     let head = re_header()
         .find(text)
         .expect("`running \\d+ tests` not found");
@@ -43,7 +49,11 @@ pub fn parse_cargo_test(text: &str) -> (&str, Vec<&str>, &str) {
     let tree_end = line.last().map_or(head_end, |cap| head_end + cap.end() + 1);
     let mut tree: Vec<_> = line.into_iter().map(|cap| cap.as_str()).collect();
     tree.sort_unstable();
-    (head.as_str(), tree, text[tree_end..].trim())
+    ParsedCargoTestOutput {
+        head: head.as_str(),
+        tree,
+        detail: text[tree_end..].trim(),
+    }
 }
 
 /// Get the lines of tests from `cargo test`.

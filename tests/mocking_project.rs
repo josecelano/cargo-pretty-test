@@ -1,4 +1,8 @@
-use cargo_pretty_test::{app::make_pretty, lazy_static, regex::parse_cargo_test};
+use cargo_pretty_test::{
+    app::make_pretty,
+    lazy_static,
+    regex::{parse_cargo_test_output, ParsedCargoTestOutput},
+};
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;
 use std::{process::Command, sync::OnceLock};
@@ -18,14 +22,14 @@ lazy_static! {
     };
 }
 lazy_static! {
-    parsed_cargo_test, (&'static str, Vec<&'static str>, &'static str), {
-        parse_cargo_test(cargo_test())
+    parsed_cargo_test, ParsedCargoTestOutput<'static>, {
+        parse_cargo_test_output(cargo_test())
     };
 }
 
 #[test]
-fn check_text() {
-    let (head, tree, detail) = parsed_cargo_test();
+fn snapshot_testing_for_parsed_output() {
+    let ParsedCargoTestOutput { head, tree, detail } = parsed_cargo_test();
     shot!(head, @"running 7 tests");
     snap!(tree, @r###"
     [
@@ -69,8 +73,8 @@ fn check_text() {
 }
 
 #[test]
-fn test_tree() {
-    let lines = parsed_cargo_test().1.iter().copied();
+fn snapshot_testing_for_pretty_output() {
+    let lines = parsed_cargo_test().tree.iter().copied();
     shot!(make_pretty(lines).unwrap(), @r###"
     test
     ├── submod
