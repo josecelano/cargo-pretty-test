@@ -6,6 +6,7 @@ license = "MIT OR GPL-3.0"
 authors = ["vague <jiping_zhou@foxmail.com>", "Jose Celano <josecelano@gmail.com>"]
 description = "A console command to format cargo test output"
 repository = "https://github.com/josecelano/pretty-test"
+exclude = [".*", "tests/", "cSpell.json"]
 
 [dependencies]
 termtree = "0.4"
