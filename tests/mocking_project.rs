@@ -5,7 +5,7 @@ use cargo_pretty_test::{
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;
-use std::{process::Command, sync::OnceLock};
+use std::process::Command;
 
 lazy_static! {
     cargo_test -> &'static str, String, {

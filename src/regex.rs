@@ -1,5 +1,4 @@
 use regex_lite::Regex;
-use std::sync::OnceLock;
 
 // Lazily initialize a global variable.
 #[doc(hidden)]
@@ -11,7 +10,7 @@ macro_rules! lazy_static {
     ($f:ident -> $ret:ty, $t:ty, $e:block $(;)?) => {
         #[allow(dead_code)]
         fn $f() -> $ret {
-            static TMP: OnceLock<$t> = OnceLock::new();
+            static TMP: ::std::sync::OnceLock<$t> = ::std::sync::OnceLock::new();
             TMP.get_or_init(|| $e)
         }
     };
