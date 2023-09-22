@@ -29,7 +29,13 @@ lazy_static! {
         Regex::new(r"running \d+ tests").expect(RE_ERROR)
     };
     re_lines_of_tests, Regex, {
-        Regex::new(r"(?m)^test \S+ \.\.\. \S+$").expect(RE_ERROR)
+        // Common test info:
+        // test submod::normal_test ... ok
+        // test submod::ignore ... ignored, reason
+        // test submod::ignore_without_reason ... ignored
+        // test submod::panic::should_panic - should panic ... ok
+        // test submod::panic::should_panic_without_reanson - should panic ... ok
+        Regex::new(r"(?m)^test \S+( - should panic)? \.\.\. \S+(, .*)?$").expect(RE_ERROR)
     };
 }
 

@@ -33,9 +33,12 @@ fn snapshot_testing_for_parsed_output() {
     shot!(head, @"running 7 tests");
     snap!(tree, @r###"
     [
+        "test submod::ignore ... ignored, reason",
         "test submod::ignore_without_reason ... ignored",
         "test submod::normal_test ... ok",
         "test submod::panic::panicked ... FAILED",
+        "test submod::panic::should_panic - should panic ... ok",
+        "test submod::panic::should_panic_without_reanson - should panic ... ok",
         "test works ... ok",
     ]
     "###);
@@ -78,10 +81,13 @@ fn snapshot_testing_for_pretty_output() {
     shot!(make_pretty(lines).unwrap(), @r###"
     test
     ├── submod
+    │   ├─ ❌ ignore
     │   ├─ ❌ ignore_without_reason
     │   ├─ ✅ normal_test
     │   └── panic
-    │       └─ ❌ panicked
+    │       ├─ ❌ panicked
+    │       ├─ ✅ should_panic
+    │       └─ ✅ should_panic_without_reanson
     └─ ✅ works
     "###);
 }
