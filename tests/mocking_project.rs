@@ -21,7 +21,34 @@ fn cargo_test() -> &'static str {
 
 #[test]
 fn check_text() {
-    shot!(cargo_test(), @r###"
+    let text = cargo_test();
+
+    #[cfg(not(RUSTC_IS_NIGHTLY))]
+    shot!(text, @r###"
+    running 7 tests
+    test submod::ignore ... ignored, reason
+    test submod::ignore_without_reason ... ignored
+    test submod::normal_test ... ok
+    test submod::panic::panicked ... FAILED
+    test submod::panic::should_panic - should panic ... ok
+    test submod::panic::should_panic_without_reanson - should panic ... ok
+    test works ... ok
+
+    failures:
+
+    ---- submod::panic::panicked stdout ----
+    thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:8:13
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+    failures:
+        submod::panic::panicked
+
+    test result: FAILED. 4 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    "###);
+
+    #[cfg(RUSTC_IS_NIGHTLY)]
+    shot!(text, @r###"
     running 7 tests
     test submod::ignore ... ignored, reason
     test submod::ignore_without_reason ... ignored
@@ -47,7 +74,7 @@ fn check_text() {
 }
 
 #[test]
-fn integration() {
+fn test_tree() {
     let text = cargo_test();
     let lines = get_lines_of_tests(text).collect::<Vec<_>>();
     snap!(lines, @r###"
