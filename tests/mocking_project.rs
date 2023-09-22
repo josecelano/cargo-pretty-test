@@ -30,7 +30,7 @@ lazy_static! {
 #[test]
 fn snapshot_testing_for_parsed_output() {
     let ParsedCargoTestOutput { head, tree, detail } = parsed_cargo_test();
-    shot!(head, @"running 7 tests");
+    shot!(head, @"running 8 tests");
     snap!(tree, @r###"
     [
         "test submod::ignore ... ignored, reason",
@@ -38,6 +38,7 @@ fn snapshot_testing_for_parsed_output() {
         "test submod::normal_test ... ok",
         "test submod::panic::panicked ... FAILED",
         "test submod::panic::should_panic - should panic ... ok",
+        "test submod::panic::should_panic_but_didnt - should panic ... FAILED",
         "test submod::panic::should_panic_without_reanson - should panic ... ok",
         "test works ... ok",
     ]
@@ -64,14 +65,17 @@ fn snapshot_testing_for_parsed_output() {
     failures:
 
     ---- submod::panic::panicked stdout ----
-    thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:8:13
+    thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
+    ---- submod::panic::should_panic_but_didnt stdout ----
+    note: test did not panic as expected
 
     failures:
         submod::panic::panicked
+        submod::panic::should_panic_but_didnt
 
-    test result: FAILED. 4 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
     "###);
 }
 
@@ -81,12 +85,13 @@ fn snapshot_testing_for_pretty_output() {
     shot!(make_pretty(lines).unwrap(), @r###"
     test
     ├── submod
-    │   ├─ ❌ ignore
-    │   ├─ ❌ ignore_without_reason
+    │   ├─ 🔕 ignore
+    │   ├─ 🔕 ignore_without_reason
     │   ├─ ✅ normal_test
     │   └── panic
     │       ├─ ❌ panicked
     │       ├─ ✅ should_panic
+    │       ├─ ❌ should_panic_but_didnt
     │       └─ ✅ should_panic_without_reanson
     └─ ✅ works
     "###);

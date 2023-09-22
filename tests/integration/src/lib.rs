@@ -1,3 +1,4 @@
+#![allow(clippy::should_panic_without_expect)] // 1.73.0
 #[test]
 fn works() {}
 
@@ -16,7 +17,10 @@ mod submod {
 
         #[test]
         #[should_panic]
-        #[allow(clippy::should_panic_without_expect)]
+        fn should_panic_but_didnt() {}
+
+        #[test]
+        #[should_panic]
         fn should_panic_without_reanson() {
             panic!()
         }

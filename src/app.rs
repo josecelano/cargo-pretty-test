@@ -72,9 +72,20 @@ fn make_tree<'s>(root: &'s str, node: &Node<'s>, parent: &mut Tree<&'s str>) {
 fn set_status(status: &str) -> GlyphPalette {
     let mut glyph = GlyphPalette::new();
     glyph.item_indent = if status.ends_with("ok") {
+        // including the case that should panic and did panic
         "─ ✅ "
+    } else if status.starts_with("... ignored") {
+        "─ 🔕 "
     } else {
+        // including should panic but didn't panic
         "─ ❌ "
     };
     glyph
 }
+
+pub const ICON_NOTATION: &str = "
+Icon Notation:
+─ ✅ pass (including the case that should panic and did panic)
+─ ❌ fail (including the case that should panic but didn't panic)
+─ 🔕 ignored (with reason omitted)
+";
