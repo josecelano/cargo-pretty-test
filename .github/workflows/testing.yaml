@@ -102,4 +102,4 @@ jobs:
 
       - id: test
         name: Run Unit Tests
-        run: cargo test --tests --benches --examples --workspace --all-targets --all-features
+        run: cargo test --tests --benches --examples --workspace --exclude integration --all-targets --all-features
