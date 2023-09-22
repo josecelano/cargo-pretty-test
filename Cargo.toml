@@ -14,3 +14,7 @@ regex-lite = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
+insta = "1.32"
+
+[workspace]
+members = ["./tests/integration/"]
