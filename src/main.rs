@@ -1,5 +1,4 @@
-use cargo_pretty_test::app::make_pretty;
-use regex_lite::Regex;
+use cargo_pretty_test::{app::make_pretty, regex::get_lines_of_tests};
 use std::process::Command;
 
 fn main() {
@@ -8,8 +7,7 @@ fn main() {
         .output()
         .expect("`cargo test` failed");
     let text = String::from_utf8_lossy(&output.stdout);
-    let re = Regex::new(r"(?m)^test \S+ \.\.\. \S+$").expect("regex pattern error");
-    if let Some(tree) = make_pretty(re.find_iter(&text).map(|m| m.as_str())) {
+    if let Some(tree) = make_pretty(get_lines_of_tests(&text)) {
         println!("{tree}");
     }
 }
