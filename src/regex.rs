@@ -42,7 +42,7 @@ pub fn parse_cargo_test(text: &str) -> (&str, Vec<&str>, &str) {
     let line: Vec<_> = re_lines_of_tests().find_iter(&text[head_end..]).collect();
     let tree_end = line.last().map_or(head_end, |cap| head_end + cap.end() + 1);
     let mut tree: Vec<_> = line.into_iter().map(|cap| cap.as_str()).collect();
-    tree.sort();
+    tree.sort_unstable();
     (head.as_str(), tree, text[tree_end..].trim())
 }
 
