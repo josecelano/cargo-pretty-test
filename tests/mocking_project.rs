@@ -1,6 +1,6 @@
 use cargo_pretty_test::{
-    app::make_pretty,
     lazy_static,
+    prettify::make_pretty,
     regex::{parse_cargo_test_output, ParsedCargoTestOutput},
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
@@ -27,6 +27,12 @@ lazy_static! {
     };
 }
 
+fn is_nightly() -> bool {
+    String::from_utf8(Command::new("rustc").arg("-V").output().unwrap().stdout)
+        .unwrap()
+        .contains("nightly")
+}
+
 #[test]
 fn snapshot_testing_for_parsed_output() {
     let ParsedCargoTestOutput { head, tree, detail } = parsed_cargo_test();
@@ -44,8 +50,8 @@ fn snapshot_testing_for_parsed_output() {
     ]
     "###);
 
-    #[cfg(RUSTC_IS_NIGHTLY)]
-    shot!(detail, @r###"
+    if is_nightly() {
+        shot!(detail, @r###"
     failures:
 
     ---- submod::panic::panicked stdout ----
@@ -62,9 +68,8 @@ fn snapshot_testing_for_parsed_output() {
 
     test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
     "###);
-
-    #[cfg(not(RUSTC_IS_NIGHTLY))]
-    shot!(detail, @r###"
+    } else {
+        shot!(detail, @r###"
     failures:
 
     ---- submod::panic::panicked stdout ----
@@ -80,6 +85,7 @@ fn snapshot_testing_for_parsed_output() {
 
     test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
     "###);
+    }
 }
 
 #[test]

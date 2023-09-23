@@ -10,7 +10,7 @@ pub fn make_pretty<'s>(lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s 
         let mut split = iter.nth(1)?.split("::");
         let next = split.next();
         let status = iter.next()?;
-        make_mods(split, status, &mut path, next);
+        make_node(split, status, &mut path, next);
     }
     let mut tree = Tree::new("test");
     for (root, child) in path {
@@ -26,7 +26,7 @@ enum Node<'s> {
 }
 
 /// Add paths to Node.
-fn make_mods<'s>(
+fn make_node<'s>(
     mut split: impl Iterator<Item = &'s str>,
     status: &'s str,
     path: &mut BTreeMap<&'s str, Node<'s>>,
@@ -38,7 +38,7 @@ fn make_mods<'s>(
         Entry::Vacant(empty) => {
             if next.is_some() {
                 let mut btree = BTreeMap::new();
-                make_mods(split, status, &mut btree, next);
+                make_node(split, status, &mut btree, next);
                 empty.insert(Node::Path(btree));
             } else {
                 empty.insert(Node::Status(status));
@@ -46,7 +46,7 @@ fn make_mods<'s>(
         }
         Entry::Occupied(mut node) => {
             if let Node::Path(btree) = node.get_mut() {
-                make_mods(split, status, btree, next);
+                make_node(split, status, btree, next);
             }
         }
     }

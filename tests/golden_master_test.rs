@@ -1,4 +1,4 @@
-use cargo_pretty_test::app::make_pretty;
+use cargo_pretty_test::prettify::make_pretty;
 use pretty_assertions::assert_eq;
 
 #[test]
