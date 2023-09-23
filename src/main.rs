@@ -1,5 +1,5 @@
 use cargo_pretty_test::{
-    app::{make_pretty, ICON_NOTATION},
+    prettify::{make_pretty, ICON_NOTATION},
     regex::{parse_cargo_test_output, ParsedCargoTestOutput},
 };
 use std::process::Command;

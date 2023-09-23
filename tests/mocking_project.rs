@@ -1,6 +1,6 @@
 use cargo_pretty_test::{
-    app::make_pretty,
     lazy_static,
+    prettify::make_pretty,
     regex::{parse_cargo_test_output, ParsedCargoTestOutput},
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
