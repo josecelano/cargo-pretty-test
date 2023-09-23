@@ -3,7 +3,7 @@ use termtree::{GlyphPalette, Tree};
 
 /// Make the cargo test output pretty.
 #[must_use]
-pub fn make_pretty<'s>(lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s str>> {
+pub fn make_pretty<'s>(ty: &'s str, lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s str>> {
     let mut path = BTreeMap::new();
     for line in lines {
         let mut iter = line.trim().splitn(3, ' ');
@@ -12,7 +12,7 @@ pub fn make_pretty<'s>(lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s 
         let status = iter.next()?;
         make_node(split, status, &mut path, next);
     }
-    let mut tree = Tree::new("test");
+    let mut tree = Tree::new(ty);
     for (root, child) in path {
         make_tree(root, &child, &mut tree);
     }

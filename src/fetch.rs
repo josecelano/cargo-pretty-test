@@ -1,4 +1,9 @@
+use crate::{
+    prettify::make_pretty,
+    regex::{TestInfo, Text},
+};
 use std::process::{Command, Output};
+use termtree::Tree;
 
 /// Collect arguments and forward them to `cargo test`.
 ///
@@ -22,4 +27,19 @@ pub fn cargo_test() -> Output {
         .args(args)
         .output()
         .expect("`cargo test` failed")
+}
+
+pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> Tree<Text<'s>> {
+    Tree::new("test").with_leaves(
+        TestInfo::parse_cargo_test(stderr, stdout)
+            .into_iter()
+            .filter_map(|info| {
+                if info.stat.total == 0 {
+                    // don't show test types that have no tests
+                    None
+                } else {
+                    make_pretty(info.src.path, info.parsed.tree.into_iter())
+                }
+            }),
+    )
 }
