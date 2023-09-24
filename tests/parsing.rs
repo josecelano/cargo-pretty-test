@@ -44,10 +44,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 fn parse_stderr_stdout() {
     use TestType::*;
 
-    let parsed_tests_info = TestInfo::parse_cargo_test(STDERR, STDOUT);
+    let parsed_tests_info = TestInfo::parse_cargo_test_with_empty_ones(STDERR, STDOUT);
     let parsed_stderr = parsed_tests_info
         .iter()
-        .map(|v| (v.ty, v.src.path, v.src.pkg))
+        .map(|(r, _)| (r.ty, r.src.src_path, r.src.bin_name))
         .collect::<Vec<_>>();
     assert_eq!(
         parsed_stderr,
@@ -64,7 +64,7 @@ fn parse_stderr_stdout() {
     assert!(
         (parsed_tests_info
             .iter()
-            .map(|v| v.stat.finished_in)
+            .map(|(_, v)| v.stat.finished_in)
             .sum::<Duration>()
             .as_secs_f32()
             - total_time)
@@ -77,8 +77,14 @@ fn parse_stderr_stdout() {
         "{:#?}",
         parsed_tests_info
             .iter()
-            .filter(|info| !info.parsed.tree.is_empty())
-            .map(|v| (v.ty, v.src.path, v.src.pkg, &v.parsed.tree, &v.stat))
+            .filter(|(_, info)| !info.parsed.tree.is_empty())
+            .map(|(r, i)| (
+                r.ty,
+                r.src.src_path,
+                r.src.bin_name,
+                &i.parsed.tree,
+                &i.stat
+            ))
             .collect::<Vec<_>>(),
     );
 }

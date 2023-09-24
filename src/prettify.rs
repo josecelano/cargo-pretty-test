@@ -13,8 +13,8 @@ pub fn make_pretty<'s>(ty: &'s str, lines: impl Iterator<Item = &'s str>) -> Opt
         make_node(split, status, &mut path, next);
     }
     let mut tree = Tree::new(ty);
-    for (root, child) in path {
-        make_tree(root, &child, &mut tree);
+    for (name, child) in path {
+        make_tree(name, &child, &mut tree);
     }
     Some(tree)
 }

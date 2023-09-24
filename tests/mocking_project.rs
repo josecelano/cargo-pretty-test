@@ -1,7 +1,7 @@
 use cargo_pretty_test::{
     lazy_static,
     prettify::make_pretty,
-    regex::{parse_stdout, ParsedCargoTestOutput, ParsedStdout},
+    regex::{parse_stdout, ParsedCargoTestOutput, TestInfo},
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;
@@ -22,7 +22,7 @@ lazy_static! {
     };
 }
 lazy_static! {
-    parsed_cargo_test, Vec<ParsedStdout<'static>>, {
+    parsed_cargo_test, Vec<TestInfo<'static>>, {
         parse_stdout(cargo_test())
     };
 }
@@ -35,7 +35,7 @@ fn is_nightly() -> bool {
 
 #[test]
 fn snapshot_testing_for_parsed_output() {
-    let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test()[0].0;
+    let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test()[0].parsed;
     shot!(head, @"running 8 tests");
     snap!(tree, @r###"
     [
@@ -90,7 +90,7 @@ fn snapshot_testing_for_parsed_output() {
 
 #[test]
 fn snapshot_testing_for_pretty_output() {
-    let lines = parsed_cargo_test()[0].0.tree.iter().copied();
+    let lines = parsed_cargo_test()[0].parsed.tree.iter().copied();
     shot!(make_pretty("test", lines).unwrap(), @r###"
     test
     ├── submod
