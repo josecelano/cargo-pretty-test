@@ -79,6 +79,8 @@ Run in your project:
 cargo pretty-test
 ```
 
+All the arguments passed to `cargo pretty-test` are forwarded to `cargo test`.
+
 ## Credits
 
 - First commit author [@ZJPzjp](https://github.com/zjp-CN).
