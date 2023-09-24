@@ -68,21 +68,19 @@ fn snapshot_testing_for_parsed_output() {
         "###);
     } else {
         shot!(detail, @r###"
-    failures:
+        failures:
 
-    ---- submod::panic::panicked stdout ----
-    thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
-    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        ---- submod::panic::panicked stdout ----
+        thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
+        note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
-    ---- submod::panic::should_panic_but_didnt stdout ----
-    note: test did not panic as expected
+        ---- submod::panic::should_panic_but_didnt stdout ----
+        note: test did not panic as expected
 
-    failures:
-        submod::panic::panicked
-        submod::panic::should_panic_but_didnt
-
-    test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    "###);
+        failures:
+            submod::panic::panicked
+            submod::panic::should_panic_but_didnt
+        "###);
     }
 }
 
