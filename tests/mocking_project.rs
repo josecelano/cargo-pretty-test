@@ -1,7 +1,7 @@
 use cargo_pretty_test::{
     lazy_static,
+    parsing::{parse_stdout, ParsedCargoTestOutput, TestInfo},
     prettify::make_pretty,
-    regex::{parse_stdout, ParsedCargoTestOutput, TestInfo},
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;

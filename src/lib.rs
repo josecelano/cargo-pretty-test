@@ -8,5 +8,6 @@
 pub mod doc;
 
 pub mod fetch;
+pub mod parsing;
 pub mod prettify;
 pub mod regex;
