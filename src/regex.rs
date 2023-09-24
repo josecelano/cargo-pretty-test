@@ -334,7 +334,8 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
                 filtered_out: cap.name("filtered")?.as_str().parse().ok()?,
                 finished_in: Duration::from_secs_f32(cap.name("time")?.as_str().parse().ok()?),
             };
-            Some((tree, detail, stats, raw))
+            let stats_start = cap.get(0)?.start();
+            Some((tree, detail[..stats_start].trim(), stats, raw))
         }
     }
 

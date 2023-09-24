@@ -34,7 +34,15 @@ pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> Tree<Tex
     for (pkg, data) in TestInfo::parse_cargo_test(stderr, stdout).pkgs {
         tree.push(Tree::new(pkg.unwrap_or("tests")).with_leaves(
             data.inner.into_iter().filter_map(|data| {
-                make_pretty(data.runner.src.src_path, data.info.parsed.tree.into_iter())
+                let parsed = data.info.parsed;
+                let detail_without_stats = parsed.detail;
+                if !detail_without_stats.is_empty() {
+                    eprintln!(
+                        "{detail_without_stats}\n\n\
+                         *************************************************************\n"
+                    );
+                }
+                make_pretty(data.runner.src.src_path, parsed.tree.into_iter())
             }),
         ));
     }
