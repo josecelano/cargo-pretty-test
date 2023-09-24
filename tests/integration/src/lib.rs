@@ -37,3 +37,7 @@ mod submod {
     #[ignore]
     fn ignore_without_reason() {}
 }
+
+/// ```
+/// ```
+pub mod doc {}

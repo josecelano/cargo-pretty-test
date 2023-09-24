@@ -4,64 +4,54 @@ use regex_lite::Regex;
 #[doc(hidden)]
 #[macro_export]
 macro_rules! lazy_static {
-    ($f:ident, $t:ty, $e:block $(;)?) => {
-        lazy_static! { $f -> &'static $t, $t, $e }
+    ($v:vis $f:ident, $t:ty, $e:block $(;)?) => {
+        lazy_static! { $v $f -> &'static $t, $t, $e }
     };
-    ($f:ident -> $ret:ty, $t:ty, $e:block $(;)?) => {
+    ($v:vis $f:ident -> $ret:ty, $t:ty, $e:block $(;)?) => {
         #[allow(dead_code)]
-        fn $f() -> $ret {
+        $v fn $f() -> $ret {
             static TMP: ::std::sync::OnceLock<$t> = ::std::sync::OnceLock::new();
             TMP.get_or_init(|| $e)
         }
-    };
-    ($( $f:ident, $t:ty, $e:block );+ $(;)?) => {
-        $( lazy_static! { $f, $t, $e } )+
-    };
-    ($( $f:ident -> $ret:ty, $t:ty, $e:block );+ $(;)?) => {
-        $( lazy_static! { $f -> $ret, $t, $e } )+
     };
 }
 
 const RE_ERROR: &str = "regex pattern error";
 
-lazy_static! {
-    re_header, Regex, {
-        Regex::new(r"running \d+ tests").expect(RE_ERROR)
-    };
-    re_lines_of_tests, Regex, {
+pub struct Re {
+    pub ty: Regex,
+    pub head: Regex,
+    pub tree: Regex,
+    pub stats: Regex,
+}
+
+lazy_static!(pub re, Re, {
+    Re {
+        // Running unittests src/lib.rs (target/debug/deps/cargo_pretty_test-9b4400a4dee777d5)
+        // Running unittests src/main.rs (target/debug/deps/cargo_pretty_test-269f1bfba2d44b88)
+        // Running tests/golden_master_test.rs (target/debug/deps/golden_master_test-4deced585767cf11)
+        // Running tests/mocking_project.rs (target/debug/deps/mocking_project-bd11dfdabc9464fa)
+        // Doc-tests cargo-pretty-test
+        ty: Regex::new(r"(?m)^\s+(Running (?P<is_unit>unittests )?(?P<path>\S+) \((?P<pkg>.*)\))|(Doc-tests (?P<doc>\S+))$")
+            .expect(RE_ERROR),
+        // running 0 tests; running 1 test; running 2 tests; ...
+        head: Regex::new(r"running (?P<amount>\d+) tests?").expect(RE_ERROR),
         // Common test info:
         // test submod::normal_test ... ok
         // test submod::ignore ... ignored, reason
         // test submod::ignore_without_reason ... ignored
         // test submod::panic::should_panic - should panic ... ok
         // test submod::panic::should_panic_without_reanson - should panic ... ok
-        Regex::new(r"(?m)^test \S+( - should panic)? \.\.\. \S+(, .*)?$").expect(RE_ERROR)
-    };
-}
-
-pub struct ParsedCargoTestOutput<'s> {
-    pub head: &'s str,
-    pub tree: Vec<&'s str>,
-    pub detail: &'s str,
-}
-
-pub fn parse_cargo_test_output(text: &str) -> ParsedCargoTestOutput<'_> {
-    let head = re_header()
-        .find(text)
-        .expect("`running \\d+ tests` not found");
-    let head_end = head.end() + 1;
-    let line: Vec<_> = re_lines_of_tests().find_iter(&text[head_end..]).collect();
-    let tree_end = line.last().map_or(head_end, |cap| head_end + cap.end() + 1);
-    let mut tree: Vec<_> = line.into_iter().map(|cap| cap.as_str()).collect();
-    tree.sort_unstable();
-    ParsedCargoTestOutput {
-        head: head.as_str(),
-        tree,
-        detail: text[tree_end..].trim(),
+        // test src/doc.rs - doc (line 3) ... ok
+        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?( - doc \(line \d+\))?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
+        // test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+        stats: Regex::new(r"(?mx)
+            ^test\ result:\ (?P<ok>\S+)\.
+            \ (?P<passed>\d+)\ passed;
+            \ (?P<failed>\d+)\ failed;
+            \ (?P<ignored>\d+)\ ignored;
+            \ (?P<measured>\d+)\ measured;
+            \ (?P<filtered>\d+)\ filtered\ out;
+            \ finished\ in\ (?P<time>\S+)s$").expect(RE_ERROR),
     }
-}
-
-/// Get the lines of tests from `cargo test`.
-pub fn get_lines_of_tests(text: &str) -> impl Iterator<Item = &str> {
-    re_lines_of_tests().find_iter(text).map(|m| m.as_str())
-}
+});

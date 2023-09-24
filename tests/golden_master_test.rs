@@ -45,7 +45,7 @@ test
 ";
 
     assert_eq!(
-        make_pretty(INPUT.trim().lines().map(str::trim))
+        make_pretty("test", INPUT.trim().lines().map(str::trim))
             .unwrap()
             .to_string(),
         OUTPUT

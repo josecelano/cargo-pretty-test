@@ -1,7 +1,7 @@
 use cargo_pretty_test::{
     lazy_static,
+    parsing::{parse_stdout, ParsedCargoTestOutput, TestInfo},
     prettify::make_pretty,
-    regex::{parse_cargo_test_output, ParsedCargoTestOutput},
 };
 use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;
@@ -15,15 +15,18 @@ lazy_static! {
             .unwrap();
         let text = String::from_utf8_lossy(&output.stdout);
         // normalize
-        Regex::new(r"(?<raw>; finished in) (\S+)")
+        let modified_time = Regex::new(r"(?<raw>; finished in) (\S+)")
             .unwrap()
-            .replace(text.trim(), "$raw 0.00s")
-            .to_string()
+            .replace(text.trim(), "$raw 0.00s");
+        let strip_backtrace = Regex::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n")
+            .unwrap()
+            .replace_all(&modified_time, "");
+        strip_backtrace.into_owned()
     };
 }
 lazy_static! {
-    parsed_cargo_test, ParsedCargoTestOutput<'static>, {
-        parse_cargo_test_output(cargo_test())
+    parsed_cargo_test, Vec<TestInfo<'static>>, {
+        parse_stdout(cargo_test())
     };
 }
 
@@ -35,7 +38,7 @@ fn is_nightly() -> bool {
 
 #[test]
 fn snapshot_testing_for_parsed_output() {
-    let ParsedCargoTestOutput { head, tree, detail } = parsed_cargo_test();
+    let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test()[0].parsed;
     shot!(head, @"running 8 tests");
     snap!(tree, @r###"
     [
@@ -52,46 +55,40 @@ fn snapshot_testing_for_parsed_output() {
 
     if is_nightly() {
         shot!(detail, @r###"
-    failures:
+        failures:
 
-    ---- submod::panic::panicked stdout ----
-    thread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:
-    explicit panic
-    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        ---- submod::panic::panicked stdout ----
+        thread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:
+        explicit panic
 
-    ---- submod::panic::should_panic_but_didnt stdout ----
-    note: test did not panic as expected
+        ---- submod::panic::should_panic_but_didnt stdout ----
+        note: test did not panic as expected
 
-    failures:
-        submod::panic::panicked
-        submod::panic::should_panic_but_didnt
-
-    test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    "###);
+        failures:
+            submod::panic::panicked
+            submod::panic::should_panic_but_didnt
+        "###);
     } else {
         shot!(detail, @r###"
-    failures:
+        failures:
 
-    ---- submod::panic::panicked stdout ----
-    thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
-    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        ---- submod::panic::panicked stdout ----
+        thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
 
-    ---- submod::panic::should_panic_but_didnt stdout ----
-    note: test did not panic as expected
+        ---- submod::panic::should_panic_but_didnt stdout ----
+        note: test did not panic as expected
 
-    failures:
-        submod::panic::panicked
-        submod::panic::should_panic_but_didnt
-
-    test result: FAILED. 4 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    "###);
+        failures:
+            submod::panic::panicked
+            submod::panic::should_panic_but_didnt
+        "###);
     }
 }
 
 #[test]
 fn snapshot_testing_for_pretty_output() {
-    let lines = parsed_cargo_test().tree.iter().copied();
-    shot!(make_pretty(lines).unwrap(), @r###"
+    let lines = parsed_cargo_test()[0].parsed.tree.iter().copied();
+    shot!(make_pretty("test", lines).unwrap(), @r###"
     test
     ├── submod
     │   ├─ 🔕 ignore
@@ -99,9 +96,9 @@ fn snapshot_testing_for_pretty_output() {
     │   ├─ ✅ normal_test
     │   └── panic
     │       ├─ ❌ panicked
-    │       ├─ ✅ should_panic
-    │       ├─ ❌ should_panic_but_didnt
-    │       └─ ✅ should_panic_without_reanson
+    │       ├─ ✅ should_panic - should panic
+    │       ├─ ❌ should_panic_but_didnt - should panic
+    │       └─ ✅ should_panic_without_reanson - should panic
     └─ ✅ works
     "###);
 }
