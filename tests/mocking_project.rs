@@ -15,10 +15,13 @@ lazy_static! {
             .unwrap();
         let text = String::from_utf8_lossy(&output.stdout);
         // normalize
-        Regex::new(r"(?<raw>; finished in) (\S+)")
+        let modified_time = Regex::new(r"(?<raw>; finished in) (\S+)")
             .unwrap()
-            .replace(text.trim(), "$raw 0.00s")
-            .into_owned()
+            .replace(text.trim(), "$raw 0.00s");
+        let strip_backtrace = Regex::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n")
+            .unwrap()
+            .replace(&modified_time, "");
+        strip_backtrace.into_owned()
     };
 }
 lazy_static! {
@@ -57,7 +60,6 @@ fn snapshot_testing_for_parsed_output() {
         ---- submod::panic::panicked stdout ----
         thread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:
         explicit panic
-        note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
         ---- submod::panic::should_panic_but_didnt stdout ----
         note: test did not panic as expected
@@ -72,7 +74,6 @@ fn snapshot_testing_for_parsed_output() {
 
         ---- submod::panic::panicked stdout ----
         thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
-        note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
         ---- submod::panic::should_panic_but_didnt stdout ----
         note: test did not panic as expected
