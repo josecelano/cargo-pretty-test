@@ -20,7 +20,7 @@ lazy_static! {
             .replace(text.trim(), "$raw 0.00s");
         let strip_backtrace = Regex::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n")
             .unwrap()
-            .replace(&modified_time, "");
+            .replace_all(&modified_time, "");
         strip_backtrace.into_owned()
     };
 }
