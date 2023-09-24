@@ -99,9 +99,9 @@ fn snapshot_testing_for_pretty_output() {
     │   ├─ ✅ normal_test
     │   └── panic
     │       ├─ ❌ panicked
-    │       ├─ ✅ should_panic
-    │       ├─ ❌ should_panic_but_didnt
-    │       └─ ✅ should_panic_without_reanson
+    │       ├─ ✅ should_panic - should panic
+    │       ├─ ❌ should_panic_but_didnt - should panic
+    │       └─ ✅ should_panic_without_reanson - should panic
     └─ ✅ works
     "###);
 }

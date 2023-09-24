@@ -9,21 +9,15 @@ use std::{
 #[doc(hidden)]
 #[macro_export]
 macro_rules! lazy_static {
-    ($f:ident, $t:ty, $e:block $(;)?) => {
-        lazy_static! { $f -> &'static $t, $t, $e }
+    ($v:vis $f:ident, $t:ty, $e:block $(;)?) => {
+        lazy_static! { $v $f -> &'static $t, $t, $e }
     };
-    ($f:ident -> $ret:ty, $t:ty, $e:block $(;)?) => {
+    ($v:vis $f:ident -> $ret:ty, $t:ty, $e:block $(;)?) => {
         #[allow(dead_code)]
-        fn $f() -> $ret {
+        $v fn $f() -> $ret {
             static TMP: ::std::sync::OnceLock<$t> = ::std::sync::OnceLock::new();
             TMP.get_or_init(|| $e)
         }
-    };
-    ($( $f:ident, $t:ty, $e:block );+ $(;)?) => {
-        $( lazy_static! { $f, $t, $e } )+
-    };
-    ($( $f:ident -> $ret:ty, $t:ty, $e:block );+ $(;)?) => {
-        $( lazy_static! { $f -> $ret, $t, $e } )+
     };
 }
 
@@ -36,7 +30,7 @@ pub struct Re {
     pub stats: Regex,
 }
 
-pub fn re() -> Re {
+lazy_static!(pub re, Re, {
     Re {
         // Running unittests src/lib.rs (target/debug/deps/cargo_pretty_test-9b4400a4dee777d5)
         // Running unittests src/main.rs (target/debug/deps/cargo_pretty_test-269f1bfba2d44b88)
@@ -54,7 +48,7 @@ pub fn re() -> Re {
         // test submod::panic::should_panic - should panic ... ok
         // test submod::panic::should_panic_without_reanson - should panic ... ok
         // test src/doc.rs - doc (line 3) ... ok
-        tree: Regex::new(r"(?m)^test \S+( - should panic)?( - doc \(line \d+\))? \.\.\. \S+(, .*)?$").expect(RE_ERROR),
+        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?( - doc \(line \d+\))?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
         // test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
         stats: Regex::new(r"(?mx)
             ^test\ result:\ (?P<ok>\S+)\.
@@ -64,8 +58,8 @@ pub fn re() -> Re {
             \ (?P<measured>\d+)\ measured;
             \ (?P<filtered>\d+)\ filtered\ out;
             \ finished\ in\ (?P<time>\S+)s$").expect(RE_ERROR),
-      }
-}
+    }
+});
 
 /// A test runner determined by the type and binary & source path.
 #[derive(Debug, Hash, PartialEq, Eq)]

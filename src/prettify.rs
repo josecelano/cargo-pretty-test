@@ -1,3 +1,4 @@
+use crate::regex::re;
 use std::collections::{btree_map::Entry, BTreeMap};
 use termtree::{GlyphPalette, Tree};
 
@@ -6,10 +7,10 @@ use termtree::{GlyphPalette, Tree};
 pub fn make_pretty<'s>(ty: &'s str, lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s str>> {
     let mut path = BTreeMap::new();
     for line in lines {
-        let mut iter = line.trim().splitn(3, ' ');
-        let mut split = iter.nth(1)?.split("::");
+        let cap = re().tree.captures(line)?;
+        let mut split = cap.name("split")?.as_str().split("::");
+        let status = cap.name("status")?.as_str();
         let next = split.next();
-        let status = iter.next()?;
         make_node(split, status, &mut path, next);
     }
     let mut tree = Tree::new(ty);
@@ -74,7 +75,7 @@ fn set_status(status: &str) -> GlyphPalette {
     glyph.item_indent = if status.ends_with("ok") {
         // including the case that should panic and did panic
         "─ ✅ "
-    } else if status.starts_with("... ignored") {
+    } else if status.starts_with("ignored") {
         "─ 🔕 "
     } else {
         // including should panic but didn't panic
