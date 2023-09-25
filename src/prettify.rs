@@ -1,10 +1,18 @@
 use crate::regex::re;
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::{
+    borrow::Cow,
+    collections::{btree_map::Entry, BTreeMap},
+};
 use termtree::{GlyphPalette, Tree};
+
+pub type TestTree<'s> = Tree<Cow<'s, str>>;
 
 /// Make the cargo test output pretty.
 #[must_use]
-pub fn make_pretty<'s>(ty: &'s str, lines: impl Iterator<Item = &'s str>) -> Option<Tree<&'s str>> {
+pub fn make_pretty<'s, S>(root: S, lines: impl Iterator<Item = &'s str>) -> Option<TestTree<'s>>
+where
+    S: Into<Cow<'s, str>>,
+{
     let mut path = BTreeMap::new();
     for line in lines {
         let cap = re().tree.captures(line)?;
@@ -13,7 +21,7 @@ pub fn make_pretty<'s>(ty: &'s str, lines: impl Iterator<Item = &'s str>) -> Opt
         let next = split.next();
         make_node(split, status, &mut path, next);
     }
-    let mut tree = Tree::new(ty);
+    let mut tree = Tree::new(root.into());
     for (name, child) in path {
         make_tree(name, &child, &mut tree);
     }
@@ -54,17 +62,17 @@ fn make_node<'s>(
 }
 
 /// Add Node to Tree.
-fn make_tree<'s>(root: &'s str, node: &Node<'s>, parent: &mut Tree<&'s str>) {
+fn make_tree<'s>(root: &'s str, node: &Node<'s>, parent: &mut TestTree<'s>) {
+    let mut testtree = Tree::new(root.into());
     match node {
         Node::Path(btree) => {
-            let mut t = Tree::new(root);
             for (path, child) in btree {
-                make_tree(path, child, &mut t);
+                make_tree(path, child, &mut testtree);
             }
-            parent.push(t);
+            parent.push(testtree);
         }
         Node::Status(s) => {
-            parent.push(Tree::new(root).with_glyphs(set_status(s)));
+            parent.push(testtree.with_glyphs(set_status(s)));
         }
     }
 }

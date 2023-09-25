@@ -94,6 +94,17 @@ impl<'s> PkgTest<'s> {
     pub fn push(&mut self, runner: TestRunner<'s>, info: TestInfo<'s>) {
         self.inner.push(Data { runner, info });
     }
+    /// Root of test tree node depending on the test type.
+    pub fn root_string(&self, pkg_name: Text) -> String {
+        let stats = self
+            .inner
+            .iter()
+            .map(|v| v.info.stats)
+            .reduce(|a, b| a + b)
+            .unwrap_or_default();
+        let ok = if stats.ok { "ok" } else { "FAIL" };
+        format!("({ok}) {pkg_name} ... ({stats})")
+    }
 }
 
 /// Information extracted from stdout & stderr.
@@ -151,10 +162,47 @@ pub struct Stats {
     pub ok: bool,
     pub total: u32,
     pub passed: u32,
+    pub failed: u32,
     pub ignored: u32,
     pub measured: u32,
     pub filtered_out: u32,
     pub finished_in: Duration,
+}
+
+impl std::fmt::Display for Stats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Stats {
+            total,
+            passed,
+            failed,
+            ignored,
+            filtered_out,
+            finished_in,
+            ..
+        } = *self;
+        let time = finished_in.as_secs_f32();
+        write!(
+            f,
+            "Total {total} tests in {time:.2}s: \
+            {passed} passed; {failed} failed; {ignored} ignored; \
+            {filtered_out} filtered out"
+        )
+    }
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Stats {
+            ok: true,
+            total: 0,
+            passed: 0,
+            failed: 0,
+            ignored: 0,
+            measured: 0,
+            filtered_out: 0,
+            finished_in: Duration::from_secs(0),
+        }
+    }
 }
 
 impl std::ops::Add<Stats> for Stats {
@@ -165,6 +213,7 @@ impl std::ops::Add<Stats> for Stats {
             ok: self.ok && rhs.ok,
             total: self.total + rhs.total,
             passed: self.passed + rhs.passed,
+            failed: self.failed + rhs.failed,
             ignored: self.ignored + rhs.ignored,
             measured: self.measured + rhs.measured,
             filtered_out: self.filtered_out + rhs.filtered_out,
@@ -267,6 +316,7 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
                 ok: cap.name("ok").map(|ok| ok.as_str() == "ok")?,
                 total: tree.len().try_into().ok()?,
                 passed: cap.name("passed")?.as_str().parse().ok()?,
+                failed: cap.name("failed")?.as_str().parse().ok()?,
                 ignored: cap.name("ignored")?.as_str().parse().ok()?,
                 measured: cap.name("measured")?.as_str().parse().ok()?,
                 filtered_out: cap.name("filtered")?.as_str().parse().ok()?,
