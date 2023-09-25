@@ -32,7 +32,7 @@ test
                     │       └─ ✅ it_should_not_allow_non_admins_to_delete_categories
                     ├── tag
                     │   └── contract
-                    │       ├─ ❌ it_should_allow_admins_to_delete_tags
+                    │       ├─ ❌ \u{1b}[1;31mit_should_allow_admins_to_delete_tags\u{1b}[0m
                     │       ├─ ✅ it_should_not_allow_adding_a_tag_with_an_empty_name
                     │       ├─ ✅ it_should_not_allow_adding_duplicated_tags
                     │       ├─ ✅ it_should_not_allow_guests_to_delete_tags

@@ -91,13 +91,13 @@ fn snapshot_testing_for_pretty_output() {
     shot!(make_pretty("test", lines).unwrap(), @r###"
     test
     ├── submod
-    │   ├─ 🔕 ignore
-    │   ├─ 🔕 ignore_without_reason
+    │   ├─ 🔕 [90mignore[0m
+    │   ├─ 🔕 [90mignore_without_reason[0m
     │   ├─ ✅ normal_test
     │   └── panic
-    │       ├─ ❌ panicked
+    │       ├─ ❌ [1;31mpanicked[0m
     │       ├─ ✅ should_panic - should panic
-    │       ├─ ❌ should_panic_but_didnt - should panic
+    │       ├─ ❌ [1;31mshould_panic_but_didnt - should panic[0m
     │       └─ ✅ should_panic_without_reanson - should panic
     └─ ✅ works
     "###);
