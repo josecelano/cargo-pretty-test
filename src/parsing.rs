@@ -17,7 +17,7 @@ pub fn parse_cargo_test<'s>(stderr: &'s str, stdout: &'s str) -> TestRunners<'s>
             .filter_map(|(runner, info)| {
                 match runner.ty {
                     UnitLib | UnitBin => pkg = Some(runner.src.bin_name),
-                    Doc => pkg = Some("Doc"),
+                    Doc => pkg = Some("Doc Tests"),
                     _ => (),
                 }
                 if info.stats.total == 0 {
@@ -99,24 +99,6 @@ impl<'s> PkgTest<'s> {
         self.stats += &info.stats;
         self.inner.push(Data { runner, info });
     }
-    /// Root of test tree node depending on the test type.
-    pub fn root_string(&self, pkg_name: Text) -> String {
-        let stats = &self.stats;
-        format!(
-            "({}) {} ... ({})",
-            ok_status(stats.ok),
-            pkg_name.blue().bold(),
-            stats.root_string()
-        )
-    }
-}
-
-fn ok_status(ok: bool) -> ColoredString {
-    if ok {
-        "OK".green().bold()
-    } else {
-        "FAIL".red().bold()
-    }
 }
 
 /// Information extracted from stdout & stderr.
@@ -181,6 +163,7 @@ pub struct Stats {
     pub finished_in: Duration,
 }
 
+/// Summary text on the bottom.
 impl std::fmt::Display for Stats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Stats {
@@ -194,18 +177,32 @@ impl std::fmt::Display for Stats {
             finished_in,
         } = *self;
         let time = finished_in.as_secs_f32();
+        let fail = if failed == 0 {
+            format!("{failed} failed")
+        } else {
+            format!("{failed} failed").red().bold().to_string()
+        };
         write!(
             f,
             "Status: {}; total {total} tests in {time:.2}s: \
-            {passed} passed; {failed} failed; {ignored} ignored; \
+            {passed} passed; {fail}; {ignored} ignored; \
             {measured} measured; {filtered_out} filtered out",
-            ok_status(ok)
+            status(ok)
         )
     }
 }
 
+fn status(ok: bool) -> ColoredString {
+    if ok {
+        "OK".green().bold()
+    } else {
+        "FAIL".red().bold()
+    }
+}
+
 impl Stats {
-    pub fn root_string(&self) -> ColoredString {
+    /// Text at the end of root node.
+    pub fn inlay_string(&self) -> String {
         let Stats {
             total,
             passed,
@@ -216,12 +213,41 @@ impl Stats {
             ..
         } = *self;
         let time = finished_in.as_secs_f32();
+
+        let mut part = Vec::with_capacity(4);
+        if passed != 0 {
+            part.push(format!("✅ {passed}"));
+        };
+        if failed != 0 {
+            part.push(format!("❌ {failed}").red().to_string());
+        };
+        if ignored != 0 {
+            part.push(format!("🔕 {ignored}"));
+        };
+        if filtered_out != 0 {
+            part.push(format!("✂️ {filtered_out}"));
+        };
+        format!("{total} tests in {time:.2}s: {}", part.join("; "))
+    }
+
+    /// Root of test tree node depending on the test type.
+    pub fn root_string(&self, pkg_name: Text) -> String {
         format!(
-            "Total {total} tests in {time:.2}s: \
-            {passed} passed; {failed} failed; {ignored} ignored; \
-            {filtered_out} filtered out"
+            "({}) {:} ... ({})",
+            status(self.ok),
+            pkg_name.blue().bold(),
+            self.inlay_string().bold()
         )
-        .bold()
+    }
+
+    /// Root of test tree node depending on the test type.
+    pub fn subroot_string(&self, pkg_name: Text) -> String {
+        format!(
+            "({}) {} ... ({})",
+            status(self.ok),
+            pkg_name,
+            self.inlay_string()
+        )
     }
 }
 

@@ -79,7 +79,7 @@ pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> (TestTre
     let mut stats = Stats::default();
     for (pkg, data) in parse_cargo_test(stderr, stdout).pkgs {
         stats += &data.stats;
-        let root = data.root_string(pkg.unwrap_or("tests")).into();
+        let root = data.stats.root_string(pkg.unwrap_or("tests")).into();
         tree.push(
             Tree::new(root).with_leaves(data.inner.into_iter().filter_map(|data| {
                 let parsed = data.info.parsed;
@@ -87,7 +87,8 @@ pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> (TestTre
                 if !detail_without_stats.is_empty() {
                     eprintln!("{detail_without_stats}\n\n{}\n", re().separator);
                 }
-                make_pretty(data.runner.src.src_path, parsed.tree.into_iter())
+                let root = data.info.stats.subroot_string(data.runner.src.src_path);
+                make_pretty(root, parsed.tree.into_iter())
             })),
         );
     }

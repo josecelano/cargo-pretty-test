@@ -119,7 +119,7 @@ impl Status {
         match self {
             Status::Ok => s.into(),
             Status::Ignored => s.bright_black().to_string().into(),
-            Status::Failed => s.red().to_string().into(),
+            Status::Failed => s.red().bold().to_string().into(),
         }
     }
 }
@@ -129,4 +129,5 @@ Icon Notation:
 ─ ✅ pass (including the case that should panic and did panic)
 ─ ❌ fail (including the case that should panic but didn't panic)
 ─ 🔕 ignored (with reason omitted)
+─ ✂️ filtered out (won't show in the test tree, but will be computed in the summary)
 ";
