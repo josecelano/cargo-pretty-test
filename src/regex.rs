@@ -1,3 +1,4 @@
+use colored::{ColoredString, Colorize};
 use regex_lite::Regex;
 
 // Lazily initialize a global variable.
@@ -23,6 +24,7 @@ pub struct Re {
     pub head: Regex,
     pub tree: Regex,
     pub stats: Regex,
+    pub separator: ColoredString,
 }
 
 lazy_static!(pub re, Re, {
@@ -53,5 +55,6 @@ lazy_static!(pub re, Re, {
             \ (?P<measured>\d+)\ measured;
             \ (?P<filtered>\d+)\ filtered\ out;
             \ finished\ in\ (?P<time>\S+)s$").expect(RE_ERROR),
+        separator: "*************************************************************".yellow().bold()
     }
 });

@@ -1,5 +1,5 @@
 use crate::regex::re;
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
 use indexmap::IndexMap;
 use std::{
     path::{Component, Path},
@@ -84,35 +84,38 @@ pub type Text<'s> = &'s str;
 #[derive(Debug, Default)]
 pub struct PkgTest<'s> {
     pub inner: Vec<Data<'s>>,
+    pub stats: Stats,
 }
 
 impl<'s> PkgTest<'s> {
     pub fn new(runner: TestRunner<'s>, info: TestInfo<'s>) -> PkgTest<'s> {
+        let stats = info.stats.clone();
         PkgTest {
             inner: vec![Data { runner, info }],
+            stats,
         }
     }
     pub fn push(&mut self, runner: TestRunner<'s>, info: TestInfo<'s>) {
+        self.stats += &info.stats;
         self.inner.push(Data { runner, info });
     }
     /// Root of test tree node depending on the test type.
     pub fn root_string(&self, pkg_name: Text) -> String {
-        let stats = self
-            .inner
-            .iter()
-            .map(|v| v.info.stats)
-            .reduce(|a, b| a + b)
-            .unwrap_or_default();
-        let ok = if stats.ok {
-            "ok".green().bold()
-        } else {
-            "FAIL".red().bold()
-        };
+        let stats = &self.stats;
         format!(
-            "({ok}) {} ... ({})",
+            "({}) {} ... ({})",
+            ok_status(stats.ok),
             pkg_name.blue().bold(),
-            stats.to_string().bold()
+            stats.root_string()
         )
+    }
+}
+
+fn ok_status(ok: bool) -> ColoredString {
+    if ok {
+        "OK".green().bold()
+    } else {
+        "FAIL".red().bold()
     }
 }
 
@@ -166,7 +169,7 @@ pub struct Src<'s> {
 }
 
 /// Statistics of test.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Stats {
     pub ok: bool,
     pub total: u32,
@@ -181,6 +184,29 @@ pub struct Stats {
 impl std::fmt::Display for Stats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Stats {
+            ok,
+            total,
+            passed,
+            failed,
+            ignored,
+            measured,
+            filtered_out,
+            finished_in,
+        } = *self;
+        let time = finished_in.as_secs_f32();
+        write!(
+            f,
+            "Status: {}; total {total} tests in {time:.2}s: \
+            {passed} passed; {failed} failed; {ignored} ignored; \
+            {measured} measured; {filtered_out} filtered out",
+            ok_status(ok)
+        )
+    }
+}
+
+impl Stats {
+    pub fn root_string(&self) -> ColoredString {
+        let Stats {
             total,
             passed,
             failed,
@@ -190,12 +216,12 @@ impl std::fmt::Display for Stats {
             ..
         } = *self;
         let time = finished_in.as_secs_f32();
-        write!(
-            f,
+        format!(
             "Total {total} tests in {time:.2}s: \
             {passed} passed; {failed} failed; {ignored} ignored; \
             {filtered_out} filtered out"
         )
+        .bold()
     }
 }
 
@@ -214,10 +240,10 @@ impl Default for Stats {
     }
 }
 
-impl std::ops::Add<Stats> for Stats {
+impl std::ops::Add<&Stats> for &Stats {
     type Output = Stats;
 
-    fn add(self, rhs: Stats) -> Self::Output {
+    fn add(self, rhs: &Stats) -> Self::Output {
         Stats {
             ok: self.ok && rhs.ok,
             total: self.total + rhs.total,
@@ -228,6 +254,12 @@ impl std::ops::Add<Stats> for Stats {
             filtered_out: self.filtered_out + rhs.filtered_out,
             finished_in: self.finished_in + rhs.finished_in,
         }
+    }
+}
+
+impl std::ops::AddAssign<&Stats> for Stats {
+    fn add_assign(&mut self, rhs: &Stats) {
+        *self = &*self + rhs;
     }
 }
 
