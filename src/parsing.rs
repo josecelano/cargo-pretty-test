@@ -1,4 +1,5 @@
 use crate::regex::re;
+use colored::Colorize;
 use indexmap::IndexMap;
 use std::{
     path::{Component, Path},
@@ -102,8 +103,16 @@ impl<'s> PkgTest<'s> {
             .map(|v| v.info.stats)
             .reduce(|a, b| a + b)
             .unwrap_or_default();
-        let ok = if stats.ok { "ok" } else { "FAIL" };
-        format!("({ok}) {pkg_name} ... ({stats})")
+        let ok = if stats.ok {
+            "ok".green().bold()
+        } else {
+            "FAIL".red().bold()
+        };
+        format!(
+            "({ok}) {} ... ({})",
+            pkg_name.blue().bold(),
+            stats.to_string().bold()
+        )
     }
 }
 

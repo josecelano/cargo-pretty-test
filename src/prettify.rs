@@ -1,4 +1,5 @@
 use crate::regex::re;
+use colored::Colorize;
 use std::{
     borrow::Cow,
     collections::{btree_map::Entry, BTreeMap},
@@ -63,33 +64,64 @@ fn make_node<'s>(
 
 /// Add Node to Tree.
 fn make_tree<'s>(root: &'s str, node: &Node<'s>, parent: &mut TestTree<'s>) {
-    let mut testtree = Tree::new(root.into());
     match node {
         Node::Path(btree) => {
+            let mut testtree = Tree::new(root.into());
             for (path, child) in btree {
                 make_tree(path, child, &mut testtree);
             }
             parent.push(testtree);
         }
         Node::Status(s) => {
-            parent.push(testtree.with_glyphs(set_status(s)));
+            let status = Status::new(s);
+            let testtree = Tree::new(status.set_color(root));
+            parent.push(testtree.with_glyphs(status.glyph()));
         }
     }
 }
 
-/// Display with a status icon
-fn set_status(status: &str) -> GlyphPalette {
-    let mut glyph = GlyphPalette::new();
-    glyph.item_indent = if status.ends_with("ok") {
-        // including the case that should panic and did panic
-        "─ ✅ "
-    } else if status.starts_with("ignored") {
-        "─ 🔕 "
-    } else {
-        // including should panic but didn't panic
-        "─ ❌ "
-    };
-    glyph
+#[derive(Clone, Copy)]
+pub enum Status {
+    Ok,
+    Ignored,
+    Failed,
+}
+
+impl Status {
+    pub fn new(status: &str) -> Status {
+        if status.ends_with("ok") {
+            // including the case that should panic and did panic
+            Status::Ok
+        } else if status.starts_with("ignored") {
+            Status::Ignored
+        } else {
+            // including should panic but didn't panic
+            Status::Failed
+        }
+    }
+
+    pub const fn icon(self) -> &'static str {
+        match self {
+            Status::Ok => "─ ✅ ",
+            Status::Ignored => "─ 🔕 ",
+            Status::Failed => "─ ❌ ",
+        }
+    }
+
+    /// Display with a status icon
+    pub fn glyph(self) -> GlyphPalette {
+        let mut glyph = GlyphPalette::new();
+        glyph.item_indent = self.icon();
+        glyph
+    }
+
+    pub fn set_color(self, s: &str) -> Cow<'_, str> {
+        match self {
+            Status::Ok => s.into(),
+            Status::Ignored => s.bright_black().to_string().into(),
+            Status::Failed => s.red().to_string().into(),
+        }
+    }
 }
 
 pub const ICON_NOTATION: &str = "
