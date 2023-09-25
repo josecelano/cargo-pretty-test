@@ -1,15 +1,43 @@
 use crate::{
     parsing::{parse_cargo_test, Text},
-    prettify::make_pretty,
+    prettify::{make_pretty, ICON_NOTATION},
 };
 use std::process::{Command, Output};
 use termtree::Tree;
+
+/// Output from `cargo test`
+pub struct Emit {
+    /// Raw output.
+    output: Output,
+    /// Don't parse the output. Forward the output instead.
+    no_parse: bool,
+}
+
+impl Emit {
+    pub fn run(self) {
+        let Emit { output, no_parse } = self;
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if no_parse {
+            eprintln!("{stderr}");
+            println!("{stdout}");
+        } else {
+            let tree = parse_cargo_test_output(&stderr, &stdout);
+            println!("{tree}\n{ICON_NOTATION}");
+        }
+    }
+}
+
+/// entrypoint for main.rs
+pub fn run() {
+    cargo_test().run();
+}
 
 /// Collect arguments and forward them to `cargo test`.
 ///
 /// Note: This filters some arguments that mess up the output, like
 /// `--nocapture` which prints in the status part and hinders parsing.
-pub fn cargo_test() -> Output {
+pub fn cargo_test() -> Emit {
     let passin: Vec<_> = std::env::args().collect();
     let forward = if passin
         .get(..2)
@@ -21,12 +49,16 @@ pub fn cargo_test() -> Output {
         // `cargo-pretty-test` yields ["path-to-cargo-pretty-test", rest]
         &passin[1..]
     };
+    let no_parse = passin.iter().any(|arg| arg == "--help" || arg == "-h");
     let args = forward.iter().filter(|arg| *arg != "--nocapture");
-    Command::new("cargo")
-        .arg("test")
-        .args(args)
-        .output()
-        .expect("`cargo test` failed")
+    Emit {
+        output: Command::new("cargo")
+            .arg("test")
+            .args(args)
+            .output()
+            .expect("`cargo test` failed"),
+        no_parse,
+    }
 }
 
 pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> Tree<Text<'s>> {
