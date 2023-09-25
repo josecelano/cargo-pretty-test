@@ -12,6 +12,7 @@ exclude = [".*", "tests/", "cSpell.json", "rustfmt.toml"]
 termtree = "0.4"
 regex-lite = "0.1"
 indexmap = "2"
+colored = "2"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

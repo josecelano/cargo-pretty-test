@@ -1,4 +1,5 @@
 use crate::regex::re;
+use colored::{ColoredString, Colorize};
 use indexmap::IndexMap;
 use std::{
     path::{Component, Path},
@@ -16,7 +17,7 @@ pub fn parse_cargo_test<'s>(stderr: &'s str, stdout: &'s str) -> TestRunners<'s>
             .filter_map(|(runner, info)| {
                 match runner.ty {
                     UnitLib | UnitBin => pkg = Some(runner.src.bin_name),
-                    Doc => pkg = Some("Doc"),
+                    Doc => pkg = Some("Doc Tests"),
                     _ => (),
                 }
                 if info.stats.total == 0 {
@@ -83,15 +84,19 @@ pub type Text<'s> = &'s str;
 #[derive(Debug, Default)]
 pub struct PkgTest<'s> {
     pub inner: Vec<Data<'s>>,
+    pub stats: Stats,
 }
 
 impl<'s> PkgTest<'s> {
     pub fn new(runner: TestRunner<'s>, info: TestInfo<'s>) -> PkgTest<'s> {
+        let stats = info.stats.clone();
         PkgTest {
             inner: vec![Data { runner, info }],
+            stats,
         }
     }
     pub fn push(&mut self, runner: TestRunner<'s>, info: TestInfo<'s>) {
+        self.stats += &info.stats;
         self.inner.push(Data { runner, info });
     }
 }
@@ -146,30 +151,141 @@ pub struct Src<'s> {
 }
 
 /// Statistics of test.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Stats {
     pub ok: bool,
     pub total: u32,
     pub passed: u32,
+    pub failed: u32,
     pub ignored: u32,
     pub measured: u32,
     pub filtered_out: u32,
     pub finished_in: Duration,
 }
 
-impl std::ops::Add<Stats> for Stats {
+/// Summary text on the bottom.
+impl std::fmt::Display for Stats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Stats {
+            ok,
+            total,
+            passed,
+            failed,
+            ignored,
+            measured,
+            filtered_out,
+            finished_in,
+        } = *self;
+        let time = finished_in.as_secs_f32();
+        let fail = if failed == 0 {
+            format!("{failed} failed")
+        } else {
+            format!("{failed} failed").red().bold().to_string()
+        };
+        write!(
+            f,
+            "Status: {}; total {total} tests in {time:.2}s: \
+            {passed} passed; {fail}; {ignored} ignored; \
+            {measured} measured; {filtered_out} filtered out",
+            status(ok)
+        )
+    }
+}
+
+fn status(ok: bool) -> ColoredString {
+    if ok {
+        "OK".green().bold()
+    } else {
+        "FAIL".red().bold()
+    }
+}
+
+impl Stats {
+    /// Text at the end of root node.
+    pub fn inlay_string(&self) -> String {
+        let Stats {
+            total,
+            passed,
+            failed,
+            ignored,
+            filtered_out,
+            finished_in,
+            ..
+        } = *self;
+        let time = finished_in.as_secs_f32();
+
+        let mut part = Vec::with_capacity(4);
+        if passed != 0 {
+            part.push(format!("✅ {passed}"));
+        };
+        if failed != 0 {
+            part.push(format!("❌ {failed}").red().to_string());
+        };
+        if ignored != 0 {
+            part.push(format!("🔕 {ignored}"));
+        };
+        if filtered_out != 0 {
+            part.push(format!("✂️ {filtered_out}"));
+        };
+        format!("{total} tests in {time:.2}s: {}", part.join("; "))
+    }
+
+    /// Root of test tree node depending on the test type.
+    pub fn root_string(&self, pkg_name: Text) -> String {
+        format!(
+            "({}) {:} ... ({})",
+            status(self.ok),
+            pkg_name.blue().bold(),
+            self.inlay_string().bold()
+        )
+    }
+
+    /// Root of test tree node depending on the test type.
+    pub fn subroot_string(&self, pkg_name: Text) -> String {
+        format!(
+            "({}) {} ... ({})",
+            status(self.ok),
+            pkg_name,
+            self.inlay_string()
+        )
+    }
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Stats {
+            ok: true,
+            total: 0,
+            passed: 0,
+            failed: 0,
+            ignored: 0,
+            measured: 0,
+            filtered_out: 0,
+            finished_in: Duration::from_secs(0),
+        }
+    }
+}
+
+impl std::ops::Add<&Stats> for &Stats {
     type Output = Stats;
 
-    fn add(self, rhs: Stats) -> Self::Output {
+    fn add(self, rhs: &Stats) -> Self::Output {
         Stats {
             ok: self.ok && rhs.ok,
             total: self.total + rhs.total,
             passed: self.passed + rhs.passed,
+            failed: self.failed + rhs.failed,
             ignored: self.ignored + rhs.ignored,
             measured: self.measured + rhs.measured,
             filtered_out: self.filtered_out + rhs.filtered_out,
             finished_in: self.finished_in + rhs.finished_in,
         }
+    }
+}
+
+impl std::ops::AddAssign<&Stats> for Stats {
+    fn add_assign(&mut self, rhs: &Stats) {
+        *self = &*self + rhs;
     }
 }
 
@@ -267,6 +383,7 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
                 ok: cap.name("ok").map(|ok| ok.as_str() == "ok")?,
                 total: tree.len().try_into().ok()?,
                 passed: cap.name("passed")?.as_str().parse().ok()?,
+                failed: cap.name("failed")?.as_str().parse().ok()?,
                 ignored: cap.name("ignored")?.as_str().parse().ok()?,
                 measured: cap.name("measured")?.as_str().parse().ok()?,
                 filtered_out: cap.name("filtered")?.as_str().parse().ok()?,
