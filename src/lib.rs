@@ -31,7 +31,6 @@
 //! │   │   └─ ✅ works
 //! │   ├── (OK) src/main.rs ... (1 tests in 0.00s: ✅ 1)
 //! │   │   └─ ✅ from_main_rs
-//!
 //! │   └── (OK) tests/parsing.rs ... (1 tests in 0.00s: ✅ 1)
 //! │       └─ ✅ from_integration
 //! └── (OK) Doc Tests ... (2 tests in 0.41s: ✅ 2)
