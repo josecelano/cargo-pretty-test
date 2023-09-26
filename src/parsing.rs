@@ -38,10 +38,13 @@ pub fn parse_cargo_test_with_empty_ones<'s>(
 ) -> impl Iterator<Item = (TestRunner<'s>, TestInfo<'s>)> {
     let parsed_stderr = parse_stderr(stderr);
     let parsed_stdout = parse_stdout(stdout);
+    let err_len = parsed_stderr.len();
+    let out_len = parsed_stdout.len();
     assert_eq!(
-        parsed_stderr.len(),
-        parsed_stdout.len(),
-        "the amount of test runners from stderr should equal to that from stdout"
+        err_len, out_len,
+        "{err_len} (the amount of test runners from stderr) should \
+         equal to {out_len} (that from stdout)\n\
+         stderr = {stderr:?}\nstdout = {stdout:?}"
     );
     parsed_stderr.into_iter().zip(parsed_stdout)
 }
@@ -146,7 +149,7 @@ pub struct Src<'s> {
     /// Name from the path of test runner binary. The path usually starts with `target/`.
     ///
     /// But this field doesn't contain neither the `target/...` prefix nor hash postfix,
-    /// so it's possible to see same path from different crates.
+    /// so it's possible to see same name from different crates.
     pub bin_name: Text<'s>,
 }
 
@@ -201,8 +204,9 @@ fn status(ok: bool) -> ColoredString {
 }
 
 impl Stats {
-    /// Text at the end of root node.
-    pub fn inlay_string(&self) -> String {
+    /// Summary text at the end of root node.
+    /// If the metric is zero, it won't be shown.
+    pub fn inlay_summary_string(&self) -> String {
         let Stats {
             total,
             passed,
@@ -213,21 +217,20 @@ impl Stats {
             ..
         } = *self;
         let time = finished_in.as_secs_f32();
-
-        let mut part = Vec::with_capacity(4);
+        let mut metrics = Vec::with_capacity(4);
         if passed != 0 {
-            part.push(format!("✅ {passed}"));
+            metrics.push(format!("✅ {passed}"));
         };
         if failed != 0 {
-            part.push(format!("❌ {failed}").red().to_string());
+            metrics.push(format!("❌ {failed}").red().to_string());
         };
         if ignored != 0 {
-            part.push(format!("🔕 {ignored}"));
+            metrics.push(format!("🔕 {ignored}"));
         };
         if filtered_out != 0 {
-            part.push(format!("✂️ {filtered_out}"));
+            metrics.push(format!("✂️ {filtered_out}"));
         };
-        format!("{total} tests in {time:.2}s: {}", part.join("; "))
+        format!("{total} tests in {time:.2}s: {}", metrics.join("; "))
     }
 
     /// Root of test tree node depending on the test type.
@@ -236,17 +239,18 @@ impl Stats {
             "({}) {:} ... ({})",
             status(self.ok),
             pkg_name.blue().bold(),
-            self.inlay_string().bold()
+            self.inlay_summary_string().bold()
         )
     }
 
-    /// Root of test tree node depending on the test type.
-    pub fn subroot_string(&self, pkg_name: Text) -> String {
+    /// Subroot of test tree node depending on the test type.
+    /// Compared with `Stats::root_string`, texts except status are non-bold.
+    pub fn subroot_string(&self, runner_name: Text) -> String {
         format!(
             "({}) {} ... ({})",
             status(self.ok),
-            pkg_name,
-            self.inlay_string()
+            runner_name,
+            self.inlay_summary_string()
         )
     }
 }
@@ -430,7 +434,8 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
     assert_eq!(
         parsed_amount_from_head, stats_total,
         "the parsed amount of running tests {parsed_amount_from_head:?} \
-         should equal to the number in stats.total {stats_total:?}"
+         should equal to the number in stats.total {stats_total:?}\n\
+         split = {split:#?}\nparsed_stdout = {parsed_stdout:#?}"
     );
 
     split

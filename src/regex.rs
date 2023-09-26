@@ -44,8 +44,19 @@ lazy_static!(pub re, Re, {
         // test submod::ignore_without_reason ... ignored
         // test submod::panic::should_panic - should panic ... ok
         // test submod::panic::should_panic_without_reanson - should panic ... ok
+        //
+        // Doc Test: ^test (?P<file>\S+) - (?P<item>\S+) \(line \d+\)( - compile( fail)?)? ... (?P<status>\S+(, .*)?)$
         // test src/doc.rs - doc (line 3) ... ok
-        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?( - doc \(line \d+\))?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
+        // test tests/integration/src/lib.rs - attribute::edition2018 (line 100) ... ok
+        // test tests/integration/src/lib.rs - attribute::ignore (line 76) ... ignored
+        // test tests/integration/src/lib.rs - attribute::no_run (line 86) - compile ... ok
+        // test tests/integration/src/lib.rs - attribute::should_compile_fail (line 90) - compile fail ... ok
+        // test tests/integration/src/lib.rs - attribute::should_compile_fail_but_didnt (line 96) - compile fail ... FAILED
+        // test tests/integration/src/lib.rs - attribute::should_panic (line 80) ... ok
+        // test tests/integration/src/lib.rs - empty_doc_mod (line 41) ... ok
+        // test tests/integration/src/lib.rs - empty_doc_mod::Item (line 48) ... ok
+        // test tests/integration/src/lib.rs - empty_doc_mod::private_mod (line 44) ... ok
+        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?(?<doctest> - \S+ \(line \d+\)( - compile( fail)?)?)?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
         // test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
         stats: Regex::new(r"(?mx)
             ^test\ result:\ (?P<ok>\S+)\.
@@ -55,6 +66,6 @@ lazy_static!(pub re, Re, {
             \ (?P<measured>\d+)\ measured;
             \ (?P<filtered>\d+)\ filtered\ out;
             \ finished\ in\ (?P<time>\S+)s$").expect(RE_ERROR),
-        separator: "*************************************************************".yellow().bold()
+        separator: "────────────────────────────────────────────────────────────────────────".yellow().bold()
     }
 });
