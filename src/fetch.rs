@@ -3,7 +3,7 @@ use crate::{
     prettify::{make_pretty, TestTree, ICON_NOTATION},
     regex::re,
 };
-use colored::Colorize;
+use colored::{control::set_override, Colorize};
 use std::process::{Command, ExitCode, Output};
 use termtree::Tree;
 
@@ -63,8 +63,9 @@ pub fn cargo_test() -> Emit {
         // `cargo-pretty-test` yields ["path-to-cargo-pretty-test", rest]
         &passin[1..]
     };
-    let no_parse = passin.iter().any(|arg| arg == "--help" || arg == "-h");
-    let args = forward.iter().filter(|arg| *arg != "--nocapture");
+    set_color(forward);
+    let no_parse = forward.iter().any(|arg| arg == "--help" || arg == "-h");
+    let args = forward.iter().filter(|&arg| arg != "--nocapture");
     Emit {
         output: Command::new("cargo")
             .arg("test")
@@ -72,6 +73,30 @@ pub fn cargo_test() -> Emit {
             .output()
             .expect("`cargo test` failed"),
         no_parse,
+    }
+}
+
+/// reintepret `--color`
+fn set_color(forward: &[String]) {
+    fn detect_env() {
+        if let Some(set_color) = std::env::var_os("CARGO_TERM_COLOR") {
+            match set_color.to_str().map(str::to_ascii_lowercase).as_deref() {
+                Some("always") => set_override(true),
+                Some("never") => set_override(false),
+                Some("auto") => (),
+                _ => unreachable!("--color only accepts one of always,never,auto"),
+            }
+        }
+    }
+    if let Some(pos) = forward.iter().position(|arg| arg.starts_with("--color")) {
+        match (&*forward[pos], forward.get(pos + 1).map(|s| &**s)) {
+            ("--color=always", _) | ("--color", Some("always")) => set_override(true),
+            ("--color=never", _) | ("--color", Some("never")) => set_override(false),
+            ("--color=auto", _) | ("--color", Some("auto")) => (),
+            _ => unreachable!("--color only accepts one of always,never,auto"),
+        }
+    } else {
+        detect_env();
     }
 }
 
