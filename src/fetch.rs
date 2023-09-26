@@ -18,8 +18,10 @@ pub struct Emit {
 impl Emit {
     pub fn run(self) -> ExitCode {
         let Emit { output, no_parse } = self;
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = strip_ansi_escapes::strip(output.stderr);
+        let stdout = strip_ansi_escapes::strip(output.stdout);
+        let stderr = String::from_utf8_lossy(&stderr);
+        let stdout = String::from_utf8_lossy(&stdout);
         if no_parse {
             println!(
                 "{phelp}\n{ICON_NOTATION}\n{sep}\n\n{help}",
