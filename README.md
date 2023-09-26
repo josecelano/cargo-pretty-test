@@ -1,6 +1,8 @@
 # Cargo Pretty Test ✨
 
 [![Testing](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml/badge.svg)](https://github.com/josecelano/pretty-test/actions/workflows/testing.yaml)
+[![Crates.io](https://img.shields.io/crates/v/cargo-pretty-test)](https://crates.io/crates/cargo-pretty-test)
+[![docs.rs](https://img.shields.io/docsrs/cargo-pretty-test)](https://docs.rs/cargo-pretty-test)
 
 A Rust command-line tool that prettifies the ugly `cargo test` output into a beautiful output.
 
