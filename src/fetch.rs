@@ -33,8 +33,7 @@ impl Emit {
             println!("{stdout}");
         } else {
             let (tree, stats) = parse_cargo_test_output(&stderr, &stdout);
-            println!("{tree}");
-            eprintln!("{stats}");
+            println!("{tree}\n{stats}");
             if !stats.ok {
                 return ExitCode::FAILURE;
             }
