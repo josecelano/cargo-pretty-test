@@ -13,7 +13,7 @@ termtree = "0.4"
 regex-lite = "0.1"
 indexmap = "2"
 colored = "2"
-strip-ansi-escapes = "0.2"
+console = "0.15"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
