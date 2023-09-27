@@ -4,25 +4,37 @@ use crate::{
     regex::re,
 };
 use colored::{control::set_override, Colorize};
-use std::process::{Command, ExitCode, Output};
+use console::{set_colors_enabled, set_colors_enabled_stderr, strip_ansi_codes, Key, Term};
+use std::{
+    io::{self, BufRead, BufReader, Write},
+    process::{Child, Command, ExitCode, Stdio},
+    thread,
+};
 use termtree::Tree;
 
 /// Output from `cargo test`
 pub struct Emit {
     /// Raw output.
-    output: Output,
+    child: Child,
     /// Don't parse the output. Forward the output instead.
-    no_parse: bool,
+    help: bool,
+    /// Don't forward raw output.
+    quite: bool,
 }
 
 impl Emit {
     pub fn run(self) -> ExitCode {
-        let Emit { output, no_parse } = self;
-        let stderr = strip_ansi_escapes::strip(output.stderr);
-        let stdout = strip_ansi_escapes::strip(output.stdout);
-        let stderr = String::from_utf8_lossy(&stderr);
-        let stdout = String::from_utf8_lossy(&stdout);
-        if no_parse {
+        let Emit { child, help, quite } = self;
+        let [stderr, stdout] = match forward_cargo_test_content(child, quite) {
+            Ok(res) => res,
+            Err(err) => {
+                eprintln!("{err:?}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let stderr = strip_ansi_codes(&stderr);
+        let stdout = strip_ansi_codes(&stdout);
+        if help {
             println!(
                 "{phelp}\n{ICON_NOTATION}\n{sep}\n\n{help}",
                 phelp = "cargo pretty-test help:".blue().bold(),
@@ -42,6 +54,70 @@ impl Emit {
     }
 }
 
+fn forward_cargo_test_content(mut child: Child, quite: bool) -> io::Result<[String; 2]> {
+    fn forward_and_save<R: BufRead, W: Write>(
+        mut reader: R,
+        mut writer: Option<W>,
+    ) -> io::Result<String> {
+        let mut buf = String::with_capacity(1024 * 2);
+        let mut pos = 0;
+        while let Ok(len) = reader.read_line(&mut buf) {
+            if len == 0 {
+                return Ok(buf);
+            }
+            let new = pos + len;
+            writer
+                .as_mut()
+                .map(|w| w.write_all(buf[pos..new].as_bytes()))
+                .transpose()?;
+            pos = new;
+        }
+        Ok(buf)
+    }
+
+    let term_stdout = (!quite).then(Term::stdout);
+
+    // Forward raw output from `cargo test`, keeping the exact display order.
+    let forward_stderr = thread::spawn({
+        let child_stderr = BufReader::new(child.stderr.take().unwrap());
+        let term_stdout = term_stdout.clone();
+        move || forward_and_save(child_stderr, term_stdout).unwrap()
+    });
+    let forward_stdout = thread::spawn({
+        let child_stdout = BufReader::new(child.stdout.take().unwrap());
+        let term_stdout = term_stdout.clone();
+        move || forward_and_save(child_stdout, term_stdout).unwrap()
+    });
+    let stderr = forward_stderr.join().unwrap();
+    let stdout = forward_stdout.join().unwrap();
+
+    if let Some(term) = term_stdout {
+        writeln!(
+            &term,
+            "{}",
+            "Press <Enter> key to clear the screen and show the Test Tree.\n\
+             Press any other key to show the Test Tree, keeping the raw input.\n"
+                .yellow()
+                .bold(),
+        )?;
+        if matches!(term.read_key(), Ok(Key::Enter)) {
+            term.clear_last_lines(1)?;
+            term.clear_screen()?;
+        } else {
+            term.clear_last_lines(3)?;
+            writeln!(
+                &term,
+                "\n{}\n{}\n{}\n",
+                "Raw output from `cargo test` 👆".yellow().bold(),
+                re().separator,
+                "Parsed output from `cargo pretty-test` 👇".yellow().bold()
+            )?;
+        }
+    }
+
+    Ok([stderr, stdout])
+}
+
 /// entrypoint for main.rs
 pub fn run() -> ExitCode {
     cargo_test().run()
@@ -53,6 +129,25 @@ pub fn run() -> ExitCode {
 /// `--nocapture` which prints in the status part and hinders parsing.
 pub fn cargo_test() -> Emit {
     let passin: Vec<_> = std::env::args().collect();
+    let dashdash = passin.iter().any(|s| s == "--");
+    let (mut pre, mut after) = (vec![], vec![]);
+    let mut add_arg = |arg: &'static str| {
+        if dashdash {
+            after.push(arg);
+        } else {
+            after.extend(["--", arg]);
+        }
+    };
+    match set_color(&passin) {
+        SetColor::Unset => {
+            pre.push("--color=always");
+            add_arg("--color=always");
+        }
+        SetColor::Always => add_arg("--color=always"),
+        SetColor::Never => add_arg("--color=never"),
+        SetColor::Auto => add_arg("--color=auto"),
+    };
+
     let forward = if passin
         .get(..2)
         .is_some_and(|v| v[0].ends_with("cargo-pretty-test") && v[1] == "pretty-test")
@@ -63,41 +158,81 @@ pub fn cargo_test() -> Emit {
         // `cargo-pretty-test` yields ["path-to-cargo-pretty-test", rest]
         &passin[1..]
     };
-    set_color(forward);
-    let no_parse = forward.iter().any(|arg| arg == "--help" || arg == "-h");
-    let args = forward.iter().filter(|&arg| arg != "--nocapture");
+    let help = forward.iter().any(|arg| arg == "--help" || arg == "-h");
+    let mut quite = false;
+    let args = forward.iter().filter(|&arg| {
+        arg != "--nocapture" || {
+            if arg == "-q" || arg == "--quite" {
+                quite = arg == "-q" || arg == "--quite";
+                false
+            } else {
+                true
+            }
+        }
+    });
     Emit {
-        output: Command::new("cargo")
+        child: Command::new("cargo")
             .arg("test")
+            .args(pre)
             .args(args)
-            .output()
+            .args(after)
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
             .expect("`cargo test` failed"),
-        no_parse,
+        help,
+        quite,
     }
 }
 
-/// reintepret `--color`
-fn set_color(forward: &[String]) {
-    fn detect_env() {
-        if let Some(set_color) = std::env::var_os("CARGO_TERM_COLOR") {
-            match set_color.to_str().map(str::to_ascii_lowercase).as_deref() {
-                Some("always") => set_override(true),
-                Some("never") => set_override(false),
-                Some("auto") => (),
-                _ => unreachable!("--color only accepts one of always,never,auto"),
-            }
-        }
-    }
-    if let Some(pos) = forward.iter().position(|arg| arg.starts_with("--color")) {
+enum SetColor {
+    Always,
+    Never,
+    Auto,
+    Unset,
+}
+
+/// Reintepret `--color` and `CARGO_TERM_COLOR`:
+/// * always (default): force `colored` to generate colored text and `console` to enable color
+/// * nover: force `colored` not to generate colored text and `console` to disable color
+/// * auto: let `colored`/`console` determin to generate/show colored text
+///
+/// Plus, add explicit `--color` argument to libtest runners, so don't pass `-- --color...` in
+/// (didn't check this yet).
+fn set_color(forward: &[String]) -> SetColor {
+    use SetColor::*;
+
+    let set = if let Some(pos) = forward.iter().position(|arg| arg.starts_with("--color")) {
         match (&*forward[pos], forward.get(pos + 1).map(|s| &**s)) {
-            ("--color=always", _) | ("--color", Some("always")) => set_override(true),
-            ("--color=never", _) | ("--color", Some("never")) => set_override(false),
-            ("--color=auto", _) | ("--color", Some("auto")) => (),
+            ("--color=always", _) | ("--color", Some("always")) => Always,
+            ("--color=never", _) | ("--color", Some("never")) => Never,
+            ("--color=auto", _) | ("--color", Some("auto")) => Auto,
+            _ => unreachable!("--color only accepts one of always,never,auto"),
+        }
+    } else if let Some(set_color) = std::env::var_os("CARGO_TERM_COLOR") {
+        match set_color.to_str().map(str::to_ascii_lowercase).as_deref() {
+            Some("always") => Always,
+            Some("never") => Never,
+            Some("auto") => Auto,
             _ => unreachable!("--color only accepts one of always,never,auto"),
         }
     } else {
-        detect_env();
+        Unset
+    };
+    match set {
+        Unset | Always => {
+            set_override(true);
+            set_colors_enabled(true);
+            set_colors_enabled_stderr(true);
+        }
+        Never => {
+            set_override(false);
+            set_colors_enabled(false);
+            set_colors_enabled_stderr(false);
+        }
+        Auto => (),
     }
+    set
 }
 
 pub fn parse_cargo_test_output<'s>(stderr: &'s str, stdout: &'s str) -> (TestTree<'s>, Stats) {
