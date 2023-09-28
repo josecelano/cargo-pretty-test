@@ -7,8 +7,15 @@ use insta::{assert_debug_snapshot as snap, assert_display_snapshot as shot};
 use regex_lite::Regex;
 use std::process::Command;
 
+struct Cache {
+    /// Output from `cargo test`, but with unimportant texts modified.
+    #[allow(dead_code)]
+    raw_output: &'static str,
+    /// Parsed information.
+    info: Vec<TestInfo<'static>>,
+}
 lazy_static! {
-    cargo_test -> &'static str, String, {
+    parsed_cargo_test, Cache, {
         let output = Command::new("cargo")
             .args(["test", "-p", "integration"])
             .output()
@@ -21,12 +28,9 @@ lazy_static! {
         let strip_backtrace = Regex::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n")
             .unwrap()
             .replace_all(&modified_time, "");
-        strip_backtrace.into_owned()
-    };
-}
-lazy_static! {
-    parsed_cargo_test, Vec<TestInfo<'static>>, {
-        parse_stdout(cargo_test())
+        let raw_output = strip_backtrace.into_owned().leak();
+        let info = parse_stdout(raw_output);
+        Cache { raw_output, info }
     };
 }
 
@@ -38,8 +42,9 @@ fn is_nightly() -> bool {
 
 #[test]
 fn snapshot_testing_for_parsed_output() {
-    let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test()[0].parsed;
+    let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test().info[0].parsed;
     shot!(head, @"running 8 tests");
+    // tree is sorted when parsing
     snap!(tree, @r###"
     [
         "test submod::ignore ... ignored, reason",
@@ -53,41 +58,36 @@ fn snapshot_testing_for_parsed_output() {
     ]
     "###);
 
+    // test order is in random, so sort failure details here
+    let mut failure_tests_info: Vec<_> = Regex::new(r"(?m)^failures:$")
+        .unwrap()
+        .split(detail)
+        .nth(1)
+        .unwrap()
+        .trim()
+        .split("\n\n")
+        .collect();
+    failure_tests_info.sort_unstable();
     if is_nightly() {
-        shot!(detail, @r###"
-        failures:
-
-        ---- submod::panic::panicked stdout ----
-        thread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:
-        explicit panic
-
-        ---- submod::panic::should_panic_but_didnt stdout ----
-        note: test did not panic as expected
-
-        failures:
-            submod::panic::panicked
-            submod::panic::should_panic_but_didnt
+        snap!(failure_tests_info, @r###"
+        [
+            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:\nexplicit panic",
+            "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
+        ]
         "###);
     } else {
-        shot!(detail, @r###"
-        failures:
-
-        ---- submod::panic::panicked stdout ----
-        thread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13
-
-        ---- submod::panic::should_panic_but_didnt stdout ----
-        note: test did not panic as expected
-
-        failures:
-            submod::panic::panicked
-            submod::panic::should_panic_but_didnt
+        snap!(failure_tests_info, @r###"
+        [
+            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13",
+            "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
+        ]
         "###);
     }
 }
 
 #[test]
 fn snapshot_testing_for_pretty_output() {
-    let lines = parsed_cargo_test()[0].parsed.tree.iter().copied();
+    let lines = parsed_cargo_test().info[0].parsed.tree.iter().copied();
     shot!(make_pretty("test", lines).unwrap(), @r###"
     test
     ├── submod
