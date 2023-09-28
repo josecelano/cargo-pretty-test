@@ -106,13 +106,13 @@ jobs:
 
       - id: test
         name: Run Unit Tests
-        run: cargo test --tests --benches --examples --all-targets --all-features
+        run: cargo test --doc --tests --benches --examples --all-targets --all-features
 
       - id: pretty-test
         name: Run cargo pretty-test
         run: |
           cargo install --path .
-          cargo pretty-test --all-targets --all-features --color=always
+          cargo pretty-test --all-targets --all-features --doc --color=always
           echo '```text' >> $GITHUB_STEP_SUMMARY
-          echo "$(cargo pretty-test --all-targets --all-features --color=never)" >> $GITHUB_STEP_SUMMARY
+          echo "$(cargo pretty-test --all-targets --all-features --doc --color=never)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
