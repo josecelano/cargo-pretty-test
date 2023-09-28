@@ -69,6 +69,10 @@ jobs:
         name: Run Documentation Checks
         run: cargo test --doc
 
+      - id: semver
+        name: Semver Checks
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+
   unit:
     name: Units
     runs-on: ubuntu-latest
@@ -103,3 +107,12 @@ jobs:
       - id: test
         name: Run Unit Tests
         run: cargo test --tests --benches --examples --workspace --exclude integration --all-targets --all-features
+
+      - id: pretty-test
+        name: Run cargo pretty-test
+        run: |
+          cargo install --path .
+          cargo pretty-test --workspace --exclude integration --all-targets --all-features --color=always
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          echo "$(cargo pretty-test --workspace --exclude integration --no-fast-fail --all-targets --all-features --color=never)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
