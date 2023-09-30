@@ -59,26 +59,35 @@ fn snapshot_testing_for_parsed_output() {
     "###);
 
     // test order is in random, so sort failure details here
-    let mut failure_tests_info: Vec<_> = Regex::new(r"(?m)^failures:$")
+    let failure_tests = Regex::new(r"(?m)^failures:$")
         .unwrap()
         .split(detail)
         .nth(1)
         .unwrap()
-        .trim()
-        .split("\n\n")
+        .trim();
+    let pos: Vec<_> = Regex::new(r"(?m)^---- \S+ stdout ----$")
+        .unwrap()
+        .find_iter(failure_tests)
+        .map(|cap| cap.start())
         .collect();
-    failure_tests_info.sort_unstable();
+    let mut failure_info: Vec<_> = pos
+        .iter()
+        .copied()
+        .zip(pos.iter().copied().skip(1).chain(Some(failure_tests.len())))
+        .map(|(a, b)| &failure_tests[a..b])
+        .collect();
+    failure_info.sort_unstable();
     if is_nightly() {
-        snap!(failure_tests_info, @r###"
+        snap!(failure_info, @r###"
         [
-            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:\nexplicit panic",
+            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:\nexplicit panic\n\n",
             "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
         ]
         "###);
     } else {
-        snap!(failure_tests_info, @r###"
+        snap!(failure_info, @r###"
         [
-            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13",
+            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13\n\n",
             "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
         ]
         "###);
