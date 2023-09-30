@@ -17,7 +17,7 @@ strip-ansi-escapes = "0.2"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
-insta = "1.32"
+insta = "1.33"
 
 [workspace]
 members = ["./tests/integration/"]
