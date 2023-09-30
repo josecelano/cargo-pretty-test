@@ -15,6 +15,25 @@ indexmap = "2"
 colored = "2"
 strip-ansi-escapes = "0.2"
 
+[features]
+# Don't add ANSI escapes, which is useful for testing.
+no-color = ["colored/no-color"]
+
+# You should use `--features no-color` to run
+# these test. Or run `cargo t` as a shortcut.
+[[test]]
+name = "golden_master_test"
+path = "./tests/golden_master_test.rs"
+required-features = ["no-color"]
+[[test]]
+name = "mocking_project"
+path = "./tests/mocking_project.rs"
+required-features = ["no-color"]
+[[test]]
+name = "parsing"
+path = "./tests/parsing.rs"
+required-features = ["no-color"]
+
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 insta = "1.33"

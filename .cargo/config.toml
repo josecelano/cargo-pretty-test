@@ -1,0 +1,4 @@
+[alias]
+# equivalent to cargo test with no-color in this project
+r = "run -- --features no-color"
+t = "test --features no-color"
