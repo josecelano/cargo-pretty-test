@@ -29,7 +29,7 @@ lazy_static! {
             .unwrap()
             .replace_all(&modified_time, "");
         let raw_output = strip_backtrace.into_owned().leak();
-        let info = parse_stdout(raw_output);
+        let info = parse_stdout(raw_output).unwrap();
         Cache { raw_output, info }
     };
 }

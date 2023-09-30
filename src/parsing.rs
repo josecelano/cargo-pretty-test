@@ -1,4 +1,4 @@
-use crate::regex::re;
+use crate::{regex::re, Result};
 use colored::{ColoredString, Colorize};
 use indexmap::IndexMap;
 use std::{
@@ -8,12 +8,12 @@ use std::{
 
 /// The core parsing function that extracts all the information from `cargo test`
 /// but filters out empty tests.
-pub fn parse_cargo_test<'s>(stderr: &'s str, stdout: &'s str) -> TestRunners<'s> {
+pub fn parse_cargo_test<'s>(stderr: &'s str, stdout: &'s str) -> Result<TestRunners<'s>> {
     use TestType::*;
 
     let mut pkg = None;
-    TestRunners::new(
-        parse_cargo_test_with_empty_ones(stderr, stdout)
+    Ok(TestRunners::new(
+        parse_cargo_test_with_empty_ones(stderr, stdout)?
             .filter_map(|(runner, info)| {
                 match runner.ty {
                     UnitLib | UnitBin => pkg = Some(runner.src.bin_name),
@@ -28,25 +28,26 @@ pub fn parse_cargo_test<'s>(stderr: &'s str, stdout: &'s str) -> TestRunners<'s>
                 }
             })
             .collect(),
-    )
+    ))
 }
 
 /// The core parsing function that extracts all the information from `cargo test`.
 pub fn parse_cargo_test_with_empty_ones<'s>(
     stderr: &'s str,
     stdout: &'s str,
-) -> impl Iterator<Item = (TestRunner<'s>, TestInfo<'s>)> {
-    let parsed_stderr = parse_stderr(stderr);
-    let parsed_stdout = parse_stdout(stdout);
+) -> Result<impl Iterator<Item = (TestRunner<'s>, TestInfo<'s>)>> {
+    let parsed_stderr = parse_stderr(stderr)?;
+    let parsed_stdout = parse_stdout(stdout)?;
     let err_len = parsed_stderr.len();
     let out_len = parsed_stdout.len();
-    assert_eq!(
-        err_len, out_len,
-        "{err_len} (the amount of test runners from stderr) should \
+    if err_len != out_len {
+        return Err(format!(
+            "{err_len} (the amount of test runners from stderr) should \
          equal to {out_len} (that from stdout)\n\
          stderr = {stderr:?}\nstdout = {stdout:?}"
-    );
-    parsed_stderr.into_iter().zip(parsed_stdout)
+        ));
+    }
+    Ok(parsed_stderr.into_iter().zip(parsed_stdout))
 }
 
 /// Pkg/crate name determined by the unittests.
@@ -301,8 +302,8 @@ pub struct ParsedCargoTestOutput<'s> {
     pub detail: Text<'s>,
 }
 
-pub fn parse_stderr(stderr: &str) -> Vec<TestRunner> {
-    fn parse_stderr_inner<'s>(cap: &regex_lite::Captures<'s>) -> TestRunner<'s> {
+pub fn parse_stderr(stderr: &str) -> Result<Vec<TestRunner>> {
+    fn parse_stderr_inner<'s>(cap: &regex_lite::Captures<'s>) -> Result<TestRunner<'s>> {
         if let Some((path, pkg)) = cap.name("path").zip(cap.name("pkg")) {
             let path = path.as_str();
             let path_norm = Path::new(path);
@@ -323,13 +324,13 @@ pub fn parse_stderr(stderr: &str) -> Vec<TestRunner> {
                     .next()
                     .and_then(|p| p.as_os_str().to_str())
                 else {
-                    unimplemented!("failed to parse the type of test: {path:?}")
+                    return Err(format!("failed to parse the type of test: {path:?}"));
                 };
                 match base_dir {
                     "tests" => TestType::Tests,
                     "examples" => TestType::Examples,
                     "benches" => TestType::Benches,
-                    _ => unimplemented!("failed to parse the type of test: {path:?}"),
+                    _ => return Err(format!("failed to parse the type of test: {path:?}")),
                 }
             };
 
@@ -337,39 +338,45 @@ pub fn parse_stderr(stderr: &str) -> Vec<TestRunner> {
             let mut pkg_comp = Path::new(pkg.as_str()).components();
             match pkg_comp.next().map(|p| p.as_os_str() == "target") {
                 Some(true) => (),
-                _ => unimplemented!("failed to parse the location of test: {pkg:?}"),
+                _ => return Err(format!("failed to parse the location of test: {pkg:?}")),
             }
-            let pkg = pkg_comp.nth(2).unwrap().as_os_str().to_str().unwrap();
+            let pkg = pkg_comp
+                .nth(2)
+                .ok_or_else(|| format!("can't get the third component in {pkg:?}"))?
+                .as_os_str()
+                .to_str()
+                .ok_or_else(|| format!("can't turn os_str into str in {pkg:?}"))?;
             let pkg = &pkg[..pkg
                 .find('-')
-                .expect("pkg should be of `pkgname-hash` pattern")];
-            TestRunner {
+                .ok_or_else(|| format!("pkg `{pkg}` should be of `pkgname-hash` pattern"))?];
+            Ok(TestRunner {
                 ty,
                 src: Src {
                     src_path: path,
                     bin_name: pkg,
                 },
-            }
+            })
         } else if let Some(s) = cap.name("doc").map(|m| m.as_str()) {
-            TestRunner {
+            Ok(TestRunner {
                 ty: TestType::Doc,
                 src: Src {
                     src_path: s,
                     bin_name: s,
                 },
-            }
+            })
         } else {
-            unimplemented!();
+            Err(format!("{cap:?} is not supported to be parsed"))
         }
     }
     re().ty
         .captures_iter(stderr)
         .map(|cap| parse_stderr_inner(&cap))
-        .collect::<Vec<_>>()
+        .collect::<Result<Vec<_>>>()
 }
 
-pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
-    fn parse_stdout_except_head(raw: &str) -> Option<(Vec<Text>, Text, Stats, Text)> {
+#[allow(clippy::too_many_lines)]
+pub fn parse_stdout(stdout: &str) -> Result<Vec<TestInfo>> {
+    fn parse_stdout_except_head(raw: &str) -> Result<(Vec<Text>, Text, Stats, Text)> {
         fn parse_tree_detail(text: &str) -> (Vec<Text>, Text) {
             let line: Vec<_> = re().tree.find_iter(text).collect();
             let tree_end = line.last().map_or(0, |cap| cap.end() + 1);
@@ -379,22 +386,63 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
         }
 
         if raw.is_empty() {
-            None
+            Err("raw stdout is empty".into())
         } else {
             let (tree, detail) = parse_tree_detail(raw);
-            let cap = re().stats.captures(detail)?;
+            let cap = re()
+                .stats
+                .captures(detail)
+                .ok_or_else(|| format!("`stats` is not found in {raw:?}"))?;
             let stats = Stats {
-                ok: cap.name("ok").map(|ok| ok.as_str() == "ok")?,
-                total: tree.len().try_into().ok()?,
-                passed: cap.name("passed")?.as_str().parse().ok()?,
-                failed: cap.name("failed")?.as_str().parse().ok()?,
-                ignored: cap.name("ignored")?.as_str().parse().ok()?,
-                measured: cap.name("measured")?.as_str().parse().ok()?,
-                filtered_out: cap.name("filtered")?.as_str().parse().ok()?,
-                finished_in: Duration::from_secs_f32(cap.name("time")?.as_str().parse().ok()?),
+                ok: cap
+                    .name("ok")
+                    .ok_or_else(|| format!("`ok` is not found in {raw:?}"))?
+                    .as_str()
+                    == "ok",
+                total: u32::try_from(tree.len()).map_err(|err| err.to_string())?,
+                passed: cap
+                    .name("passed")
+                    .ok_or_else(|| format!("`passed` is not found in {raw:?}"))?
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|err| err.to_string())?,
+                failed: cap
+                    .name("failed")
+                    .ok_or_else(|| format!("`failed` is not found in {raw:?}"))?
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|err| err.to_string())?,
+                ignored: cap
+                    .name("ignored")
+                    .ok_or_else(|| format!("`ignored` is not found in {raw:?}"))?
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|err| err.to_string())?,
+                measured: cap
+                    .name("measured")
+                    .ok_or_else(|| format!("`measured` is not found in {raw:?}"))?
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|err| err.to_string())?,
+                filtered_out: cap
+                    .name("filtered")
+                    .ok_or_else(|| format!("`filtered` is not found in {raw:?}"))?
+                    .as_str()
+                    .parse::<u32>()
+                    .map_err(|err| err.to_string())?,
+                finished_in: Duration::from_secs_f32(
+                    cap.name("time")
+                        .ok_or_else(|| format!("`time` is not found in {raw:?}"))?
+                        .as_str()
+                        .parse::<f32>()
+                        .map_err(|err| err.to_string())?,
+                ),
             };
-            let stats_start = cap.get(0)?.start();
-            Some((tree, detail[..stats_start].trim(), stats, raw))
+            let stats_start = cap
+                .get(0)
+                .ok_or_else(|| format!("can't get stats start in {raw:?}"))?
+                .start();
+            Ok((tree, detail[..stats_start].trim(), stats, raw))
         }
     }
 
@@ -410,35 +458,37 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
             ))
         })
         .collect();
-    assert!(
-        !split.is_empty(),
-        "{stdout} should contain `running (?P<amount>\\d+) tests?` pattern"
-    );
+    if split.is_empty() {
+        return Err(format!(
+            "{stdout:?} should contain `running (?P<amount>\\d+) tests?` pattern"
+        ));
+    }
     let parsed_stdout = if split.len() == 1 {
-        vec![parse_stdout_except_head(stdout).unwrap()]
+        vec![parse_stdout_except_head(stdout)?]
     } else {
         let start = split.iter().map(|v| v.0);
         let end = start.clone().skip(1).chain([stdout.len()]);
         start
             .zip(end)
-            .filter_map(|(a, b)| {
+            .map(|(a, b)| {
                 let src = &stdout[a..b];
                 parse_stdout_except_head(src)
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>>>()?
     };
 
     // check the amount of tests
     let parsed_amount_from_head: Vec<_> = split.iter().map(|v| v.2).collect();
     let stats_total: Vec<_> = parsed_stdout.iter().map(|v| v.2.total).collect();
-    assert_eq!(
-        parsed_amount_from_head, stats_total,
-        "the parsed amount of running tests {parsed_amount_from_head:?} \
-         should equal to the number in stats.total {stats_total:?}\n\
-         split = {split:#?}\nparsed_stdout = {parsed_stdout:#?}"
-    );
+    if parsed_amount_from_head != stats_total {
+        return Err(format!(
+            "the parsed amount of running tests {parsed_amount_from_head:?} \
+             should equal to the number in stats.total {stats_total:?}\n\
+             split = {split:#?}\nparsed_stdout = {parsed_stdout:#?}"
+        ));
+    }
 
-    split
+    Ok(split
         .iter()
         .zip(parsed_stdout)
         .map(|(head_info, v)| TestInfo {
@@ -450,5 +500,5 @@ pub fn parse_stdout(stdout: &str) -> Vec<TestInfo> {
             stats: v.2,
             raw: v.3,
         })
-        .collect()
+        .collect())
 }
