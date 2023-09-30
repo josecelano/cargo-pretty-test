@@ -48,6 +48,7 @@
 
 #![allow(
     clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
     clippy::must_use_candidate,
     clippy::enum_glob_use
 )]
@@ -59,3 +60,6 @@ pub mod fetch;
 pub mod parsing;
 pub mod prettify;
 pub mod regex;
+
+pub type Error = String;
+pub type Result<T, E = Error> = ::std::result::Result<T, E>;
