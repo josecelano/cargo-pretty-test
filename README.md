@@ -69,6 +69,26 @@ cargo pretty-test
 
 Note: all the arguments passed to `cargo pretty-test` are forwarded to `cargo test`.
 
+---
+
+Run in CI as a summary: [demo](https://github.com/josecelano/cargo-pretty-test/actions/runs/6334295212)
+
+```console
+      - id: pretty-test
+        name: Run cargo pretty-test
+        run: |
+          cargo install cargo-pretty-test
+          cargo pretty-test --color=always
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          echo "$(cargo pretty-test --color=never)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+```
+
+![](https://user-images.githubusercontent.com/25300418/271169701-6efc57fb-9ab3-4842-9599-aa5784001c36.png)
+
+Note: `--color=always` produces texts in color when running CI, and `--color=never`
+strips ANSI escapes before written to summary.
+
 ## Credits
 
 - First commit author [@ZJPzjp](https://github.com/zjp-CN).
