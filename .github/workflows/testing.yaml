@@ -106,13 +106,13 @@ jobs:
 
       - id: test
         name: Run Unit Tests
-        run: cargo test -F "colored/no-color"
+        run: cargo test -F "no-color"
 
       - id: pretty-test
         name: Run cargo pretty-test
         run: |
           cargo install --path .
-          cargo pretty-test -F "colored/no-color" --color=always
+          cargo pretty-test -F "no-color" --color=always
           echo '```text' >> $GITHUB_STEP_SUMMARY
-          echo "$(cargo pretty-test -F "colored/no-color" --color=never)" >> $GITHUB_STEP_SUMMARY
+          echo "$(cargo pretty-test -F "no-color" --color=never)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
