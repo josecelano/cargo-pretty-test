@@ -196,9 +196,9 @@ dependencies = [
 
 [[package]]
 name = "regex-lite"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f96ede7f386ba6e910092e7ccdc04176cface62abebea07ed6b46d870ed95ca2"
+checksum = "83aa2b788f84cf0e43e6ae57bb0fcdbbe7604414a7d2bf997a311b062a6f4291"
 
 [[package]]
 name = "rustix"
