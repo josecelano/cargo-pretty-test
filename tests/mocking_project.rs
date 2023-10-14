@@ -34,12 +34,6 @@ lazy_static! {
     };
 }
 
-fn is_nightly() -> bool {
-    String::from_utf8(Command::new("rustc").arg("-V").output().unwrap().stdout)
-        .unwrap()
-        .contains("nightly")
-}
-
 #[test]
 fn snapshot_testing_for_parsed_output() {
     let ParsedCargoTestOutput { head, tree, detail } = &parsed_cargo_test().info[0].parsed;
@@ -77,21 +71,12 @@ fn snapshot_testing_for_parsed_output() {
         .map(|(a, b)| &failure_tests[a..b])
         .collect();
     failure_info.sort_unstable();
-    if is_nightly() {
-        snap!(failure_info, @r###"
+    snap!(failure_info, @r###"
         [
             "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:9:13:\nexplicit panic\n\n",
             "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
         ]
-        "###);
-    } else {
-        snap!(failure_info, @r###"
-        [
-            "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at 'explicit panic', tests/integration/src/lib.rs:9:13\n\n",
-            "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
-        ]
-        "###);
-    }
+    "###);
 }
 
 #[test]
