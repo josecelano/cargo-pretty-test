@@ -56,7 +56,8 @@ lazy_static!(pub re, Re, {
         // test tests/integration/src/lib.rs - empty_doc_mod (line 41) ... ok
         // test tests/integration/src/lib.rs - empty_doc_mod::Item (line 48) ... ok
         // test tests/integration/src/lib.rs - empty_doc_mod::private_mod (line 44) ... ok
-        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?(?<doctest> - \S+ \(line \d+\)( - compile( fail)?)?)?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
+        // test tests/integration/src/lib.rs - (line 1) ... ok
+        tree: Regex::new(r"(?m)^test (?P<split>\S+( - should panic)?(?<doctest> -( \S+)? \(line \d+\)( - compile( fail)?)?)?) \.\.\. (?P<status>\S+(, .*)?)$").expect(RE_ERROR),
         // test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
         stats: Regex::new(r"(?mx)
             ^test\ result:\ (?P<ok>\S+)\.

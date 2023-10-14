@@ -40,7 +40,8 @@ test snapshot_testing_for_pretty_output ... ok
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
 
-running 13 tests
+running 14 tests
+test tests/integration/src/lib.rs - (line 1) ... ok
 test src/lib.rs - attribute::edition2018 (line 100) ... ok
 test src/lib.rs - attribute::ignore (line 76) ... ignored
 test src/lib.rs - attribute::no_run (line 86) - compile ... ok
@@ -55,7 +56,7 @@ test src/lib.rs - normal_doc_mod::Item (line 69) ... ok
 test src/lib.rs - normal_doc_mod::private_mod (line 59) ... ok
 test src/lib.rs - normal_doc_mod::private_mod::Item (line 63) ... ok
 
-test result: ok. 11 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 12 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ";
 
 #[test]
@@ -107,8 +108,8 @@ fn display_test_tree() {
     │   └── (OK) tests/mocking_project.rs ... (2 tests in 0.02s: ✅ 2)
     │       ├─ ✅ snapshot_testing_for_parsed_output
     │       └─ ✅ snapshot_testing_for_pretty_output
-    └── (OK) Doc Tests ... (13 tests in 0.00s: ✅ 11; ❌ 1; 🔕 1)
-        └── (OK) cargo-pretty-test ... (13 tests in 0.00s: ✅ 11; ❌ 1; 🔕 1)
+    └── (OK) Doc Tests ... (14 tests in 0.00s: ✅ 12; ❌ 1; 🔕 1)
+        └── (OK) cargo-pretty-test ... (14 tests in 0.00s: ✅ 12; ❌ 1; 🔕 1)
             ├── src/lib.rs - attribute
             │   ├─ ✅ edition2018 (line 100)
             │   ├─ 🔕 ignore (line 76)
@@ -125,7 +126,8 @@ fn display_test_tree() {
             │   ├── private_mod
             │   │   └─ ✅ Item (line 63)
             │   └─ ✅ private_mod (line 59)
-            └─ ✅ src/lib.rs - normal_doc_mod (line 55)
+            ├─ ✅ src/lib.rs - normal_doc_mod (line 55)
+            └─ ✅ tests/integration/src/lib.rs - (line 1)
     "###);
 
     let total_time = 0.03;
