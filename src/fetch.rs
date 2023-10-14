@@ -10,8 +10,8 @@ use termtree::Tree;
 
 /// Output from `cargo test`
 pub struct Emit {
-    /// Raw output.
-    output: Output,
+    /// Raw output. None means don't run `cargo test` like for `--version`.
+    output: Option<Output>,
     /// Don't parse the output. Forward the output instead.
     no_parse: bool,
 }
@@ -19,6 +19,9 @@ pub struct Emit {
 impl Emit {
     pub fn run(self) -> ExitCode {
         let Emit { output, no_parse } = self;
+        let Some(output) = output else {
+            return ExitCode::SUCCESS;
+        };
         let raw_err = String::from_utf8_lossy(&output.stderr);
         let raw_out = String::from_utf8_lossy(&output.stdout);
         let stderr = strip_ansi_escapes::strip(&*raw_err);
@@ -76,15 +79,25 @@ pub fn cargo_test() -> Emit {
         // `cargo-pretty-test` yields ["path-to-cargo-pretty-test", rest]
         &passin[1..]
     };
+    if forward.iter().any(|arg| arg == "--version" || arg == "-V") {
+        const VERSION: &str = env!("CARGO_PKG_VERSION");
+        println!("cargo-pretty-test version: {VERSION}");
+        return Emit {
+            output: None,
+            no_parse: true,
+        };
+    }
     set_color(forward);
     let no_parse = forward.iter().any(|arg| arg == "--help" || arg == "-h");
     let args = forward.iter().filter(|&arg| arg != "--nocapture");
     Emit {
-        output: Command::new("cargo")
-            .arg("test")
-            .args(args)
-            .output()
-            .expect("`cargo test` failed"),
+        output: Some(
+            Command::new("cargo")
+                .arg("test")
+                .args(args)
+                .output()
+                .expect("`cargo test` failed"),
+        ),
         no_parse,
     }
 }
