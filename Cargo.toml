@@ -1,6 +1,6 @@
 [package]
 name = "cargo-pretty-test"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 license = "MIT OR GPL-3.0"
 authors = ["vague <jiping_zhou@foxmail.com>", "Jose Celano <josecelano@gmail.com>"]
