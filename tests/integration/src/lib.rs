@@ -1,3 +1,5 @@
+//! ```
+//! ```
 #![allow(clippy::should_panic_without_expect, dead_code)] // 1.73.0
 #[test]
 fn works() {}
