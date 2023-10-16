@@ -68,12 +68,12 @@ fn snapshot_testing_for_parsed_output() {
         .iter()
         .copied()
         .zip(pos.iter().copied().skip(1).chain(Some(failure_tests.len())))
-        .map(|(a, b)| &failure_tests[a..b])
+        .map(|(a, b)| failure_tests[a..b].trim())
         .collect();
     failure_info.sort_unstable();
     snap!(failure_info, @r###"
     [
-        "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:11:13:\nexplicit panic\n\n",
+        "---- submod::panic::panicked stdout ----\nthread 'submod::panic::panicked' panicked at tests/integration/src/lib.rs:11:13:\nexplicit panic",
         "---- submod::panic::should_panic_but_didnt stdout ----\nnote: test did not panic as expected",
     ]
     "###);

@@ -80,7 +80,7 @@ Run in CI as a summary: [demo](https://github.com/josecelano/cargo-pretty-test/a
           cargo install cargo-pretty-test
           cargo pretty-test --color=always
           echo '```text' >> $GITHUB_STEP_SUMMARY
-          echo "$(cargo pretty-test --color=never)" >> $GITHUB_STEP_SUMMARY
+          echo "$(cargo pretty-test --color=never)" >> $GITHUB_STEP_SUMMARY 2>&1
           echo '```' >> $GITHUB_STEP_SUMMARY
 ```
 
